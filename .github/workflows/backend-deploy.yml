@@ -43,12 +43,15 @@ jobs:
         run: |
           sam build --template ${{ env.SAM_TEMPLATE }}
 
+      - name: Verify build output
+        run: ls -R .aws-sam/build || (echo "Build artifacts missing!" && exit 1)
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: sam-build
-          path: .aws-sam/
-          retention-days: 1
+          path: .aws-sam/build
+          retention-days: 30
 
   deploy-dev:
     name: Deploy to Dev
@@ -63,7 +66,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sam-build
-          path: .aws-sam/
+          path: .aws-sam/build
+
+      - name: Verify artifact
+        run: ls -R .aws-sam/build || (echo "Artifact missing!" && exit 1)
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
@@ -92,7 +98,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sam-build
-          path: .aws-sam/
+          path: .aws-sam/build
+
+      - name: Verify artifact
+        run: ls -R .aws-sam/build || (echo "Artifact missing!" && exit 1)
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2
@@ -121,7 +130,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: sam-build
-          path: .aws-sam/
+          path: .aws-sam/build
+
+      - name: Verify artifact
+        run: ls -R .aws-sam/build || (echo "Artifact missing!" && exit 1)
 
       - name: Set up AWS SAM CLI
         uses: aws-actions/setup-sam@v2

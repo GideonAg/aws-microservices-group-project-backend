@@ -5,7 +5,7 @@ Description: Task Management System SAM Template
 Globals:
   Function:
     Timeout: 30
-    Runtime: java17
+    Runtime: java21
     MemorySize: 256
     Environment:
       Variables:
@@ -19,6 +19,7 @@ Globals:
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
+        AWS_REGION: !Ref AWS::Region
 
 Parameters:
   AdminEmail:
@@ -347,7 +348,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
         - StepFunctionsExecutionPolicy:
-            StateMachineArn: !Ref TaskExpirationStateMachine
+            StateMachineName: !GetAtt TaskExpirationStateMachine.Name
 
   # Step Functions
   TaskExpirationStateMachine:
