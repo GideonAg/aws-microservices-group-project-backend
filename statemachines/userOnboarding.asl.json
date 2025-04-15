@@ -1,0 +1,113 @@
+{
+  "Comment": "State machine for user onboarding and SNS topic subscriptions",
+  "StartAt": "SubscribeToTopics",
+  "States": {
+    "SubscribeToTopics": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "SubscribeToTaskAssignment",
+          "States": {
+            "SubscribeToTaskAssignment": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:subscribe",
+              "Parameters": {
+                "TopicArn": "${TaskAssignmentNotificationTopic}",
+                "Protocol": "email",
+                "Endpoint.$": "$.email",
+                "FilterPolicy": {
+                  "userId": [
+                    {
+                      "S.$": "$.userId"
+                    }
+                  ]
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "SubscribeToTaskDeadline",
+          "States": {
+            "SubscribeToTaskDeadline": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:subscribe",
+              "Parameters": {
+                "TopicArn": "${TaskDeadlineNotificationTopic}",
+                "Protocol": "email",
+                "Endpoint.$": "$.email",
+                "FilterPolicy": {
+                  "userId": [
+                    {
+                      "S.$": "$.userId"
+                    }
+                  ]
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "SubscribeToClosedTask",
+          "States": {
+            "SubscribeToClosedTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:subscribe",
+              "Parameters": {
+                "TopicArn": "${ClosedTaskNotificationTopic}",
+                "Protocol": "email",
+                "Endpoint.$": "$.email",
+                "FilterPolicy": {
+                  "userId": [
+                    {
+                      "S.$": "$.userId"
+                    }
+                  ]
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "CheckIfAdmin",
+          "States": {
+            "CheckIfAdmin": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.role",
+                  "StringEquals": "admin",
+                  "Next": "SubscribeToTaskComplete"
+                }
+              ],
+              "Default": "SkipAdminSubscription"
+            },
+            "SubscribeToTaskComplete": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:subscribe",
+              "Parameters": {
+                "TopicArn": "${TaskCompleteNotificationTopic}",
+                "Protocol": "email",
+                "Endpoint.$": "$.email",
+                "FilterPolicy": {
+                  "role": [
+                    "admin"
+                  ]
+                }
+              },
+              "End": true
+            },
+            "SkipAdminSubscription": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  }
+}

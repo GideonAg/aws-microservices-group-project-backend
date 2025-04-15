@@ -1,0 +1,88 @@
+{
+  "Comment": "State machine for handling expired tasks",
+  "StartAt": "UpdateTaskStatus",
+  "States": {
+    "UpdateTaskStatus": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${TaskTable}",
+        "Key": {
+          "taskId": {
+            "S.$": "$.taskId"
+          }
+        },
+        "UpdateExpression": "SET #status = :status, #expired_at = :expired_at",
+        "ExpressionAttributeNames": {
+          "#status": "status",
+          "#expired_at": "expired_at"
+        },
+        "ExpressionAttributeValues": {
+          ":status": {
+            "S": "expired"
+          },
+          ":expired_at": {
+            "S.$": "$$.Execution.StartTime"
+          }
+        },
+        "ReturnValues": "ALL_NEW"
+      },
+      "ResultPath": "$.taskDetails",
+      "Next": "NotifyUsers"
+    },
+    "NotifyUsers": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "NotifyTeamMember",
+          "States": {
+            "NotifyTeamMember": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+                "TopicArn": "${ClosedTaskNotificationTopic}",
+                "Message.$": "States.Format('The task \"{}\" has expired. TaskId: {}', $.taskDetails.Attributes.name.S, $.taskId)",
+                "MessageAttributes": {
+                  "userId": {
+                    "DataType": "String",
+                    "StringValue.$": "$.taskDetails.Attributes.assignedTo.S"
+                  },
+                  "notificationType": {
+                    "DataType": "String",
+                    "StringValue": "TASK_EXPIRED"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "NotifyAdmin",
+          "States": {
+            "NotifyAdmin": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::sns:publish",
+              "Parameters": {
+                "TopicArn": "${ClosedTaskNotificationTopic}",
+                "Message.$": "States.Format('The task \"{}\" assigned to {} has expired. TaskId: {}', $.taskDetails.Attributes.name.S, $.taskDetails.Attributes.assignedTo.S, $.taskId)",
+                "MessageAttributes": {
+                  "role": {
+                    "DataType": "String",
+                    "StringValue": "admin"
+                  },
+                  "notificationType": {
+                    "DataType": "String",
+                    "StringValue": "TASK_EXPIRED"
+                  }
+                }
+              },
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  }
+}
