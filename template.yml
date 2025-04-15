@@ -5,7 +5,7 @@ Description: Task Management System SAM Template
 Globals:
   Function:
     Timeout: 30
-    Runtime: java17
+    Runtime: java21
     MemorySize: 256
     Environment:
       Variables:
@@ -19,11 +19,20 @@ Globals:
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
+        REGION: !Ref AWS::Region
 
 Parameters:
+  StageName:
+    Type: String
+    Default: dev
+    Description: "Deployment stage name"
+    AllowedValues:
+      - dev
+      - prod
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
+
 
 Resources:
   #######################
@@ -33,7 +42,7 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub TaskManagementUserPool-${StageName}
-      AutoVerifyAttributes:
+      AutoVerifiedAttributes:
         - email
       UsernameAttributes:
         - email
@@ -42,11 +51,9 @@ Resources:
         - Name: email
           AttributeDataType: String
           Mutable: true
-          Required: true
-        - Name: role
+        - Name: custom:role
           AttributeDataType: String
           Mutable: true
-          Required: true
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
         InviteMessageTemplate:
@@ -84,7 +91,7 @@ Resources:
           Value: !Ref AdminEmail
         - Name: email_verified
           Value: "true"
-        - Name: role
+        - Name: custom:role
           Value: "admin"
 
   #######################
@@ -188,10 +195,10 @@ Resources:
     Properties:
       StageName: !Ref StageName
       Auth:
-        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
+
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
@@ -229,6 +236,25 @@ Resources:
             Method: post
             Auth:
               Authorizer: CognitoAuthorizer
+
+  AuthenticationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.auth.AuthenticationHandler::handleRequest
+      Policies:
+        - Version:  "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: cognito-idp:InitiateAuth
+              Resource: "*"
+      Events:
+        Authentication:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /auth
+            Method: POST
 
   # Task Management
   CreateTaskFunction:
@@ -347,7 +373,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
         - StepFunctionsExecutionPolicy:
-            StateMachineArn: !Ref TaskExpirationStateMachine
+            StateMachineName: !GetAtt TaskExpirationStateMachine.Name
 
   # Step Functions
   TaskExpirationStateMachine:
