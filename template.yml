@@ -19,7 +19,6 @@ Globals:
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
-        AWS_REGION: !Ref AWS::Region
 
 Parameters:
   StageName:
@@ -37,7 +36,7 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub TaskManagementUserPool-${StageName}
-      AutoVerifyAttributes:
+      AutoVerifiedAttributes:
         - email
       UsernameAttributes:
         - email
@@ -122,7 +121,7 @@ Resources:
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub TaskManagement-Users-${StageName}
+      TableName: !Sub "TaskManagement-Users-${StageName}"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: userId
