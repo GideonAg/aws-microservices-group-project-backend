@@ -21,11 +21,6 @@ Globals:
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
 
 Parameters:
-  StageName:
-    Type: String
-    Default: prod
-    Description: Stage name for API Gateway deployment
-
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
@@ -210,8 +205,8 @@ Resources:
   CreateUserFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/auth/
-      Handler: createUser.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.auth.CreateUserHandler::handleRequest
       Policies:
         - AmazonCognitoPowerUser
         - DynamoDBCrudPolicy:
@@ -239,8 +234,8 @@ Resources:
   CreateTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: createTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.CreateTaskHandler::handleRequest
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
@@ -259,8 +254,8 @@ Resources:
   GetTasksFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: getTasks.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.GetTasksHandler::handleRequest
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
@@ -277,8 +272,8 @@ Resources:
   GetTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: getTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.GetTaskHandler::handleRequest
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
@@ -295,8 +290,8 @@ Resources:
   UpdateTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: updateTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.UpdateTaskHandler::handleRequest
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
@@ -316,8 +311,8 @@ Resources:
   ProcessTaskQueueFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/notifications/
-      Handler: processTaskQueue.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.notifications.ProcessTaskQueueHandler::handleRequest
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt TaskAssignmentNotificationTopic.TopicName
@@ -333,8 +328,8 @@ Resources:
   TaskDeadlineNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/notifications/
-      Handler: taskDeadlineNotification.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.notifications.TaskDeadlineNotificationHandler::handleRequest
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt TaskDeadlineNotificationTopic.TopicName
@@ -344,8 +339,8 @@ Resources:
   ProcessExpiredTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/notifications/
-      Handler: processExpiredTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.notifications.ProcessExpiredTaskHandler::handleRequest
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
