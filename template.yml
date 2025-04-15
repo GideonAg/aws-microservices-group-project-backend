@@ -29,6 +29,7 @@ Parameters:
     AllowedValues:
       - dev
       - prod
+      - staging
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
