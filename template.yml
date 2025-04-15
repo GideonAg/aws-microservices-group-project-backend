@@ -347,12 +347,8 @@ Resources:
             TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
         - DynamoDBCrudPolicy:
             TableName: !Ref TaskTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - states:StartExecution
-              Resource:
-                - !GetAtt TaskExpirationStateMachine.Arn
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt TaskExpirationStateMachine.Name
 
   # Step Functions
   TaskExpirationStateMachine:
