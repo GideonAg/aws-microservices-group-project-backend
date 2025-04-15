@@ -49,7 +49,7 @@ Resources:
         - Name: role
           AttributeDataType: String
           Mutable: true
-          Required: true
+          Required: false
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
         InviteMessageTemplate:
