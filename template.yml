@@ -22,6 +22,9 @@ Globals:
         AWS_REGION: !Ref AWS::Region
 
 Parameters:
+  StageName:
+    Type: String
+    Description: Environment stage (e.g. dev, staging, prod)
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
