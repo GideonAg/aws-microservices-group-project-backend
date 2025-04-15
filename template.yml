@@ -5,7 +5,7 @@ Description: Task Management System SAM Template
 Globals:
   Function:
     Timeout: 30
-    Runtime: java17
+    Runtime: java21
     MemorySize: 256
     Environment:
       Variables:
