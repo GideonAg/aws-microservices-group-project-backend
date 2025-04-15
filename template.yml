@@ -19,6 +19,7 @@ Globals:
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
+        AWS_REGION: !Ref AWS::Region
 
 Parameters:
   StageName:
