@@ -16,9 +16,11 @@ Globals:
         TASK_ASSIGNMENT_TOPIC_ARN: !Ref TaskAssignmentNotificationTopic
         TASK_DEADLINE_TOPIC_ARN: !Ref TaskDeadlineNotificationTopic
         CLOSED_TASK_TOPIC_ARN: !Ref ClosedTaskNotificationTopic
+        REOPENED_TASK_TOPIC_ARN: !Ref ReopenedTasksNotificationTopic
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
+        REGION: !Ref AWS::Region
 
 Parameters:
   StageName:
@@ -79,21 +81,20 @@ Resources:
 
   AdminUser:
     Type: AWS::Cognito::UserPoolUser
-    DependsOn: UserPool
     Properties:
       UserPoolId: !Ref UserPool
       Username: !Ref AdminEmail
       UserAttributes:
         - Name: email
           Value: !Ref AdminEmail
-        - Name: email_verified
-          Value: "true"
-        - Name: role
+        - Name: custom:role
           Value: "admin"
+      DesiredDeliveryMediums:
+        - EMAIL
 
   #######################
   # Database Resources
-  #######################
+  ######################
   TaskTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -122,7 +123,7 @@ Resources:
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub TaskManagement-Users-${StageName}
+      TableName: !Sub "TaskManagement-Users-${StageName}"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: userId
@@ -160,6 +161,12 @@ Resources:
     Properties:
       TopicName: !Sub ClosedTaskNotificationTopic-${StageName}
       DisplayName: Closed Task
+
+  ReopenedTasksNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ReopenedTasksNotificationTopic-${StageName}
+      DisplayName: Reopened Task
 
   TaskCompleteNotificationTopic:
     Type: AWS::SNS::Topic
@@ -212,18 +219,26 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.auth.CreateUserHandler::handleRequest
       Policies:
-        - AmazonCognitoPowerUser
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UserTable
-        - Statement:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminSetUserPassword
+              Resource: !GetAtt UserPool.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt UserTable.Arn
             - Effect: Allow
               Action:
                 - sns:Subscribe
-                - sns:ListSubscriptionsByTopic
+                - sns:Publish
               Resource:
                 - !Ref TaskAssignmentNotificationTopic
                 - !Ref TaskDeadlineNotificationTopic
                 - !Ref ClosedTaskNotificationTopic
+                - !Ref ReopenedTasksNotificationTopic
       Events:
         CreateUser:
           Type: Api
@@ -241,10 +256,16 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.tasks.CreateTaskHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt TasksQueue.QueueName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TasksQueue.Arn
       Events:
         CreateTask:
           Type: Api
@@ -261,8 +282,13 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.tasks.GetTasksHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource: !GetAtt TaskTable.Arn
       Events:
         GetTasks:
           Type: Api
@@ -279,8 +305,12 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.tasks.GetTaskHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt TaskTable.Arn
       Events:
         GetTask:
           Type: Api
@@ -297,10 +327,18 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.tasks.UpdateTaskHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskCompleteNotificationTopic.TopicName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource:
+                - !Ref TaskCompleteNotificationTopic
+                - !Ref ReopenedTasksNotificationTopic
       Events:
         UpdateTask:
           Type: Api
@@ -318,16 +356,24 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.notifications.ProcessTaskQueueHandler::handleRequest
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskAssignmentNotificationTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref TaskAssignmentNotificationTopic
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
       Events:
         SQSEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt TasksQueue.Arn
             BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   TaskDeadlineNotificationFunction:
     Type: AWS::Serverless::Function
@@ -335,10 +381,16 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.notifications.TaskDeadlineNotificationHandler::handleRequest
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskDeadlineNotificationTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref TaskDeadlineNotificationTopic
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+              Resource: !GetAtt TaskTable.Arn
 
   ProcessExpiredTaskFunction:
     Type: AWS::Serverless::Function
@@ -346,18 +398,20 @@ Resources:
       CodeUri: ./
       Handler: com.taskmanagementsystem.notifications.ProcessExpiredTaskHandler::handleRequest
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - StepFunctionsExecutionPolicy:
-            StateMachineName: !GetAtt TaskExpirationStateMachine.Name
-      Events:
-        SQSEvent:
-          Type: SQS
-          Properties:
-            Queue: !Ref TasksQueue
-            BatchSize: 1
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ClosedTaskNotificationTopic
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - states:StartExecution
+              Resource: !GetAtt TaskExpirationStateMachine.Arn
 
   # Step Functions
   TaskExpirationStateMachine:
@@ -366,10 +420,16 @@ Resources:
       DefinitionUri: statemachines/taskExpiration.asl.json
       Type: STANDARD
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ClosedTaskNotificationTopic
 
   UserOnboardingStateMachine:
     Type: AWS::Serverless::StateMachine
@@ -377,12 +437,16 @@ Resources:
       DefinitionUri: statemachines/userOnboarding.asl.json
       Type: STANDARD
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskAssignmentNotificationTopic.TopicName
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskDeadlineNotificationTopic.TopicName
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Subscribe
+              Resource:
+                - !Ref TaskAssignmentNotificationTopic
+                - !Ref TaskDeadlineNotificationTopic
+                - !Ref ClosedTaskNotificationTopic
+                - !Ref ReopenedTasksNotificationTopic
 
   #######################
   # EventBridge Resources
