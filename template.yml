@@ -199,7 +199,6 @@ Resources:
     Properties:
       StageName: !Ref StageName
       Auth:
-        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
@@ -248,6 +247,25 @@ Resources:
             Method: post
             Auth:
               Authorizer: CognitoAuthorizer
+
+  AuthenticationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.auth.AuthenticationHandler::handleRequest
+      Policies:
+        - Version:  "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: cognito-idp:InitiateAuth
+              Resource: "*"
+      Events:
+        Authentication:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /auth
+            Method: POST
 
   # Task Management
   CreateTaskFunction:
