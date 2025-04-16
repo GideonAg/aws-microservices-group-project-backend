@@ -27,6 +27,10 @@ Parameters:
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
+  AdminPassword:
+    Type: String
+    Description: Initial password for the admin user
+    NoEcho: true
 
 Resources:
   #######################
@@ -89,6 +93,7 @@ Resources:
           Value: "true"
         - Name: role
           Value: "admin"
+      TemporaryPassword: !Ref AdminPassword
 
   #######################
   # Database Resources
