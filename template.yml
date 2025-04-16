@@ -79,6 +79,7 @@ Resources:
 
   AdminUser:
     Type: AWS::Cognito::UserPoolUser
+    DependsOn: UserPool
     Properties:
       UserPoolId: !Ref UserPool
       Username: !Ref AdminEmail
