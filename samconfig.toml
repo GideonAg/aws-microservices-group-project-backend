@@ -1,17 +1,14 @@
 version = 0.1
-[default]
+[staging]
 [staging.deploy]
 [default.deploy.parameters]
 stack_name = "task-management-system"
 s3_bucket = "task-management-sam-deployment-bucket"
 s3_prefix = "task-management-system"
-region = "eu-west-1"
+region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"dev\" AdminEmail=\"essilfiebernard85@gmail.com\""
-resolve_s3 = true
-image_repositories = []
-disable_rollback = true
+parameter_overrides = "StageName=\"staging\" AdminEmail=\"gideon.agbosu@amalitech.com\""
 
 [dev]
 [dev.deploy]
@@ -22,7 +19,7 @@ s3_prefix = "task-management-system-dev"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"dev\" AdminEmail=\"admin@example.com\""
+parameter_overrides = "StageName=\"dev\" AdminEmail=\"gideon.agbosu@amalitech.com\""
 
 [prod]
 [prod.deploy]
@@ -33,4 +30,4 @@ s3_prefix = "task-management-system-prod"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
+parameter_overrides = "StageName=\"prod\" AdminEmail=\"gideon.agbosu@amalitech.com\""
