@@ -19,9 +19,11 @@ Globals:
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
-        AWS_REGION: !Ref AWS::Region
 
 Parameters:
+  StageName:
+    Type: String
+    Description: Environment stage (e.g. dev, staging, prod)
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
@@ -34,7 +36,7 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub TaskManagementUserPool-${StageName}
-      AutoVerifyAttributes:
+      AutoVerifiedAttributes:
         - email
       UsernameAttributes:
         - email
@@ -47,7 +49,7 @@ Resources:
         - Name: role
           AttributeDataType: String
           Mutable: true
-          Required: true
+          Required: false
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
         InviteMessageTemplate:
@@ -349,6 +351,12 @@ Resources:
             TableName: !Ref TaskTable
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt TaskExpirationStateMachine.Name
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !Ref TasksQueue
+            BatchSize: 1
 
   # Step Functions
   TaskExpirationStateMachine:
