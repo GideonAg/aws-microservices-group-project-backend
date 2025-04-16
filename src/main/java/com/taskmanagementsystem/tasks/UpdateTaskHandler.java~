@@ -7,7 +7,6 @@ import java.util.Objects;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.taskmanagementsystem.entities.Users;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -43,8 +42,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
             String taskId = requestEvent.getPathParameters().get("taskId");
             Map<String, Object> authorizeMap = requestEvent.getRequestContext().getAuthorizer();
             JsonNode claimsNode = objectMapper.valueToTree(authorizeMap.get("claims"));
-
-
+            UserCla
         }
     }
 
