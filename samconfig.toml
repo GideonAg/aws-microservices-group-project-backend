@@ -1,6 +1,8 @@
 version = 0.1
+
 [staging]
-[staging.deploy]
+deploy = { }
+
 [default.deploy.parameters]
 stack_name = "task-management-system"
 s3_bucket = "task-management-sam-deployment-bucket"
@@ -8,10 +10,27 @@ s3_prefix = "task-management-system"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"staging\" AdminEmail=\"gideon.agbosu@amalitech.com\""
+parameter_overrides = 'StageName="staging" AdminEmail="gideon.agbosu@amalitech.com"'
 
-[dev]
-[dev.deploy]
+[default.build.parameters]
+template_file = "c:\\Users\\KwasiSakyiBaidoo\\Documents\\GitHub\\aws-microservices-group-project-backend\\template.yml"
+cached = true
+parallel = true
+use_container = true
+
+[default.global.parameters]
+stack_name = "task-manager-dev"
+region = "eu-central-1"
+
+
+[default.sync.parameters]
+template_file = "c:\\Users\\KwasiSakyiBaidoo\\Documents\\GitHub\\aws-microservices-group-project-backend\\template.yml"
+dependency_layer = false
+watch = true
+
+[default.sync.parameters.parameter_overrides]
+StageName = "dev"
+AdminEmail = "kwasi.baidoo@amalitech.com"
 [dev.deploy.parameters]
 stack_name = "task-management-system-dev"
 s3_bucket = "task-management-sam-deployment-bucket"
@@ -19,10 +38,8 @@ s3_prefix = "task-management-system-dev"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"dev\" AdminEmail=\"gideon.agbosu@amalitech.com\""
+parameter_overrides = 'StageName="dev" AdminEmail="gideon.agbosu@amalitech.com"'
 
-[prod]
-[prod.deploy]
 [prod.deploy.parameters]
 stack_name = "task-management-system-prod"
 s3_bucket = "task-management-sam-deployment-bucket"
@@ -30,4 +47,4 @@ s3_prefix = "task-management-system-prod"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"prod\" AdminEmail=\"gideon.agbosu@amalitech.com\""
+parameter_overrides = 'StageName="prod" AdminEmail="gideon.agbosu@amalitech.com"'

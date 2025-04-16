@@ -367,6 +367,33 @@ Resources:
             Auth:
               Authorizer: CognitoAuthorizer
 
+
+  ReassignTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.ReassignTaskHandler::handleRequest
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TasksQueue.Arn
+      Events:
+        ReassignTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /tasks/{taskId}/reassign
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+
   # Notifications
   ProcessTaskQueueFunction:
     Type: AWS::Serverless::Function
