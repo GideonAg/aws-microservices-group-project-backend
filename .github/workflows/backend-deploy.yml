@@ -83,7 +83,7 @@ jobs:
 
       - name: Deploy to dev environment using samconfig.toml
         run: |
-          sam deploy --config-file samconfig.toml --config-env dev
+          sam deploy --config-file samconfig.toml --config-env dev --no-confirm-changeset --no-fail-on-empty-changeset
 
   deploy-staging:
     name: Deploy to Staging
@@ -115,7 +115,7 @@ jobs:
 
       - name: Deploy to staging environment using samconfig.toml
         run: |
-          sam deploy --config-file samconfig.toml --config-env staging
+          sam deploy --config-file samconfig.toml --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset
 
   deploy-production:
     name: Deploy to Production
@@ -147,4 +147,4 @@ jobs:
 
       - name: Deploy to production using samconfig.toml
         run: |
-          sam deploy --config-file samconfig.toml --config-env prod
+          sam deploy --config-file samconfig.toml --config-env prod --no-confirm-changeset --no-fail-on-empty-changeset
