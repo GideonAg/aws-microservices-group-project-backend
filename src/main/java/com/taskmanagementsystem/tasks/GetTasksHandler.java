@@ -22,7 +22,6 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
 
     private final DynamoDBMapper dynamoDBMapper;
     private final ObjectMapper objectMapper;
-    private final String userTableName;
 
     public GetTasksHandler() {
         AmazonDynamoDB dynamoDBClient = DynamoDBUtil.getDynamoDBClient();
@@ -35,7 +34,6 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 .build();
         this.dynamoDBMapper = new DynamoDBMapper(dynamoDBClient, config);
         this.objectMapper = new ObjectMapper();
-        this.userTableName = System.getenv("USER_TABLE");
     }
 
     @Override
