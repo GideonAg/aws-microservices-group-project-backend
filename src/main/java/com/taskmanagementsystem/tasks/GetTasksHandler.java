@@ -11,7 +11,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.entities.Tasks;
-// import com.taskmanagementsystem.entities.Users;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 
 import java.util.HashMap;
@@ -57,14 +56,20 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 return response;
             }
 
+            // Extract the email directly from claims - similar to your working GetTaskHandler
             String userEmail = claims.get("email");
+            String userRole = claims.get("custom:role");
+            
             if (userEmail == null || userEmail.isEmpty()) {
                 response.setStatusCode(401);
                 response.setBody("{\"message\": \"Unauthorized: Email not found in token\"}");
                 return response;
             }
+            
+            context.getLogger().log("User email: " + userEmail);
+            context.getLogger().log("User role: " + userRole);
 
-            // Query directly using the email from the claims
+            // Query tasks directly with the email from claims
             DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
                     .withIndexName("AssigneeIndex")
                     .withConsistentRead(false)
@@ -74,6 +79,7 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                     ));
 
             List<Tasks> tasks = dynamoDBMapper.query(Tasks.class, taskQuery);
+            context.getLogger().log("Tasks found: " + tasks.size());
 
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("statusCode", 200);
@@ -85,6 +91,7 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
             return response;
 
         } catch (Exception e) {
+            context.getLogger().log("Error retrieving tasks: " + e.getMessage());
             response.setStatusCode(500);
             try {
                 response.setBody(objectMapper.writeValueAsString(Map.of(

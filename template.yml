@@ -325,7 +325,9 @@ Resources:
               Action:
                 - dynamodb:Query
                 - dynamodb:Scan
-              Resource: !GetAtt TaskTable.Arn
+              Resource:
+                - !GetAtt TaskTable.Arn
+                - !Sub "${TaskTable.Arn}/index/AssigneeIndex"
       Events:
         GetTasks:
           Type: Api
