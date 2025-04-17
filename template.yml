@@ -480,6 +480,11 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: statemachines/userOnboarding.asl.json
+      DefinitionSubstitutions:
+        TaskAssignmentNotificationTopicArn: !Ref TaskAssignmentNotificationTopic
+        TaskDeadlineNotificationTopicArn: !Ref TaskDeadlineNotificationTopic
+        ClosedTaskNotificationTopicArn: !Ref ClosedTaskNotificationTopic
+        TaskCompleteNotificationTopicArn: !Ref TaskCompleteNotificationTopic
       Type: STANDARD
       Policies:
         - Version: "2012-10-17"

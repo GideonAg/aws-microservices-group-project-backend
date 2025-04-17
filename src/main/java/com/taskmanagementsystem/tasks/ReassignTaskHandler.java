@@ -12,6 +12,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.taskmanagementsystem.entities.Tasks;
+import com.taskmanagementsystem.services.TaskService;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 import com.taskmanagementsystem.util.TaskAssignmentMessage;
 
@@ -25,6 +27,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
     private final String taskTableName;
     private final String queueUrl;
     private final ObjectMapper objectMapper;
+    private final TaskService taskService;
 
     public ReassignTaskHandler() {
         this.dynamoDbClient = DynamoDBUtil.getDynamoDBClient();
@@ -32,6 +35,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
         this.taskTableName = System.getenv("TASK_TABLE");
         this.queueUrl = System.getenv("TASKS_QUEUE_URL");
         this.objectMapper = new ObjectMapper();
+        this.taskService = new TaskService();
     }
 
     @Override
@@ -53,6 +57,13 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
                         .withStatusCode(403)
                         .withBody("{\"message\": \"Forbidden: Only admins can reassign tasks\"}");
             }
+            // Check if task is closed
+            Tasks task = taskService.getTask(taskId);
+            if (!task.getStatus().equals("closed")) {
+                return new APIGatewayProxyResponseEvent()
+                        .withStatusCode(403)
+                        .withBody("{\"message\": \"Forbidden: Only closed tasks can be reassigned\"}");
+            }
             
             // Reassign the task to new user
             Map<String, AttributeValue> key = new HashMap<>();
@@ -70,6 +81,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
             dynamoDbClient.updateItem(updateRequest); 
 
             // Send message to SQS for notification processing
+            // TODO: Use general function for this
             TaskAssignmentMessage message = new TaskAssignmentMessage(taskId, newAssignedTo);
             String messageBody;
             try {
