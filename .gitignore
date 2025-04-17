@@ -10,6 +10,8 @@ target/
 *.iws
 *.iml
 *.ipr
+.aws-sam/
+.idea/
 
 ### Eclipse ###
 .apt_generated
