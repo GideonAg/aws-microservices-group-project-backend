@@ -4,6 +4,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -56,9 +57,10 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 return response;
             }
 
-            // Extract the email directly from claims - similar to your working GetTaskHandler
+            // Extract the email directly from claims
             String userEmail = claims.get("email");
             String userRole = claims.get("custom:role");
+            boolean isAdmin = "admin".equals(userRole);
             
             if (userEmail == null || userEmail.isEmpty()) {
                 response.setStatusCode(401);
@@ -69,17 +71,30 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
             context.getLogger().log("User email: " + userEmail);
             context.getLogger().log("User role: " + userRole);
 
-            // Query tasks directly with the email from claims
-            DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
-                    .withIndexName("AssigneeIndex")
-                    .withConsistentRead(false)
-                    .withKeyConditionExpression("assignedTo = :email")
-                    .withExpressionAttributeValues(Map.of(
-                            ":email", new AttributeValue().withS(userEmail)
-                    ));
+            List<Tasks> tasks;
+            
+            // For admins, fetch all tasks
+            if (isAdmin) {
+                // Scan all tasks if the user is an admin
+                tasks = dynamoDBMapper.scan(Tasks.class, new DynamoDBScanExpression());
+                context.getLogger().log("Admin user - fetched all tasks: " + tasks.size());
+            } else {
+                // For regular users, query by assignedTo
+                Map<String, AttributeValue> eav = new HashMap<>();
+                eav.put(":email", new AttributeValue().withS(userEmail));
+                
+                DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
+                        .withIndexName("AssigneeIndex")
+                        .withConsistentRead(false)
+                        .withKeyConditionExpression("assignedTo = :email")
+                        .withExpressionAttributeValues(eav);
 
-            List<Tasks> tasks = dynamoDBMapper.query(Tasks.class, taskQuery);
-            context.getLogger().log("Tasks found: " + tasks.size());
+                // Additional debug logging to see what's happening
+                context.getLogger().log("Query params: assignedTo = " + userEmail);
+                
+                tasks = dynamoDBMapper.query(Tasks.class, taskQuery);
+                context.getLogger().log("Regular user - tasks found: " + tasks.size());
+            }
 
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("statusCode", 200);
@@ -92,6 +107,7 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
 
         } catch (Exception e) {
             context.getLogger().log("Error retrieving tasks: " + e.getMessage());
+            e.printStackTrace();
             response.setStatusCode(500);
             try {
                 response.setBody(objectMapper.writeValueAsString(Map.of(
