@@ -19,7 +19,7 @@ parallel = true
 use_container = true
 
 [default.global.parameters]
-stack_name = "task-management-app-dev"
+stack_name = "task-management-dev"
 region = "eu-central-1"
 
 [default.sync.parameters]

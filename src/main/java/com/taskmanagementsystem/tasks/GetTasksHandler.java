@@ -11,7 +11,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.entities.Tasks;
-import com.taskmanagementsystem.entities.Users;
+// import com.taskmanagementsystem.entities.Users;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 
 import java.util.HashMap;
@@ -57,30 +57,14 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 return response;
             }
 
-            String cognitoUsername = claims.get("sub");
-            if (cognitoUsername == null || cognitoUsername.isEmpty()) {
+            String userEmail = claims.get("email");
+            if (userEmail == null || userEmail.isEmpty()) {
                 response.setStatusCode(401);
-                response.setBody("{\"message\": \"Unauthorized: User ID not found in token\"}");
+                response.setBody("{\"message\": \"Unauthorized: Email not found in token\"}");
                 return response;
             }
 
-            DynamoDBQueryExpression<Users> userQuery = new DynamoDBQueryExpression<Users>()
-                    .withIndexName("EmailIndex")
-                    .withConsistentRead(false)
-                    .withKeyConditionExpression("cognitoUsername = :cognitoUsername")
-                    .withExpressionAttributeValues(Map.of(
-                            ":cognitoUsername", new AttributeValue().withS(cognitoUsername)
-                    ));
-
-            List<Users> users = dynamoDBMapper.query(Users.class, userQuery);
-            if (users.isEmpty()) {
-                response.setStatusCode(404);
-                response.setBody("{\"message\": \"User not found\"}");
-                return response;
-            }
-
-            String userEmail = users.getFirst().getEmail();
-
+            // Query directly using the email from the claims
             DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
                     .withIndexName("AssigneeIndex")
                     .withConsistentRead(false)
