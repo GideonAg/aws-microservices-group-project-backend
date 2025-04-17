@@ -41,7 +41,7 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
 
         } catch (Exception e) {
             response.setStatusCode(500);
-            response.setBody("Internal Server Error");
+            response.setBody("Internal Server Error" + e.getMessage());
             return response;
         }
     }
