@@ -7,7 +7,7 @@ import java.util.List;
 
 public class PasswordGenerator {
 
-    private static final int PASSWORD_LENGTH = 6;
+    private static final int PASSWORD_LENGTH = 8;
     private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
     private static final String DIGITS = "0123456789";
