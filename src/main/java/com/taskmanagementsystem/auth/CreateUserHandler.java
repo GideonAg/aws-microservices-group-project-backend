@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.DTO.CreateUserRequest;
 import com.taskmanagementsystem.entities.Users;
 import com.taskmanagementsystem.util.DynamoDBUtil;
+import com.taskmanagementsystem.util.PasswordGenerator;
 
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
@@ -56,9 +57,9 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         
         try {
-            // Extract the JWT token from the Authorization header
-            
-            
+
+            //Check if authorized user is an admin
+               
             Map<String, Object> authorizer = input.getRequestContext().getAuthorizer();
             Map<String, String> claims = (Map<String, String>) authorizer.get("claims");
             String role = claims.get("custom:role");
@@ -80,14 +81,15 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             }
             
             // Generate a temporary password
-            String temporaryPassword = "9875Kofi%";
+            String temporaryPassword = PasswordGenerator.generatePassword();
             
             // Create the user in Cognito
-            AdminCreateUserResponse cognitoResponse = createCognitoUser(createUserRequest, temporaryPassword);
+            createCognitoUser(createUserRequest, temporaryPassword);
             
             // Store user information in DynamoDB using the Users entity
             Users user = storeUserInDynamoDB(createUserRequest);
             String userId = user.getUserId();
+
             // Start onboarding workflow to set up notifications
             startOnboardingWorkflow(userId, createUserRequest);
             

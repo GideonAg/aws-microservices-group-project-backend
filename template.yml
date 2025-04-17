@@ -230,6 +230,12 @@ Resources:
               Action:
                 - dynamodb:PutItem
               Resource: !GetAtt UserTable.Arn
+
+            - Effect: Allow
+              Action:
+                - states:StartExecution
+              Resource: !GetAtt UserOnboardingStateMachine.Arn
+
             - Effect: Allow
               Action:
                 - sns:Subscribe
