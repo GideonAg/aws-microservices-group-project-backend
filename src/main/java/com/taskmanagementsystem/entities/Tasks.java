@@ -1,8 +1,16 @@
 package com.taskmanagementsystem.entities;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@DynamoDBTable(tableName = "Tasks")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@DynamoDBTable(tableName = "")
 public class Tasks {
     static {
         String tableName = System.getenv("TASK_TABLE");
@@ -50,99 +58,99 @@ public class Tasks {
     @DynamoDBAttribute
     private Long updatedAt;
 
-    public String getAssignedUserEmail() {
-        return assignedUserEmail;
-    }
-
-    public Long getCompletedAt() {
-        return completedAt;
-    }
-
-    public Long getCreatedAt() {
-        return createdAt;
-    }
-
-    public String getCreatedBy() {
-        return createdBy;
-    }
-
-    public Long getDeadline() {
-        return deadline;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getResponsibility() {
-        return responsibility;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
     public String getTaskId() {
         return taskId;
-    }
-
-    public Long getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public String getUserComment() {
-        return userComment;
-    }
-
-    public void setAssignedUserEmail(String assignedUserEmail) {
-        this.assignedUserEmail = assignedUserEmail;
-    }
-
-    public void setCompletedAt(Long completedAt) {
-        this.completedAt = completedAt;
-    }
-
-    public void setCreatedAt(Long createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public void setCreatedBy(String createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public void setDeadline(Long deadline) {
-        this.deadline = deadline;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setResponsibility(String responsibility) {
-        this.responsibility = responsibility;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
     }
 
     public void setTaskId(String taskId) {
         this.taskId = taskId;
     }
 
-    public void setUpdatedAt(Long updatedAt) {
-        this.updatedAt = updatedAt;
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Long getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(Long deadline) {
+        this.deadline = deadline;
+    }
+
+    public String getResponsibility() {
+        return responsibility;
+    }
+
+    public void setResponsibility(String responsibility) {
+        this.responsibility = responsibility;
+    }
+
+    public String getAssignedUserEmail() {
+        return assignedUserEmail;
+    }
+
+    public void setAssignedUserEmail(String assignedUserEmail) {
+        this.assignedUserEmail = assignedUserEmail;
+    }
+
+    public Long getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(Long completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    public String getUserComment() {
+        return userComment;
     }
 
     public void setUserComment(String userComment) {
         this.userComment = userComment;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Long getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Long createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Long updatedAt) {
+        this.updatedAt = updatedAt;
     }
 }

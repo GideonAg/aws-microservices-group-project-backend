@@ -2,6 +2,7 @@ package com.taskmanagementsystem.util;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import lombok.Getter;
 
 
 /**
@@ -13,9 +14,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
  *   AmazonDynamoDB client = DynamoDBUtil.getDynamoDBClient();
  */
 public class DynamoDBUtil {
+    @Getter
     private static final AmazonDynamoDB dynamoDBClient = AmazonDynamoDBClientBuilder.standard().build();
 
-    public static AmazonDynamoDB getDynamoDBClient(){
-        return dynamoDBClient;
-    }
 }

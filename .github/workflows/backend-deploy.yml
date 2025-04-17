@@ -3,8 +3,6 @@ name: Backend Deployment
 on:
   push:
     branches: [ main, staging, dev ]
-  pull_request:
-    branches: [ main, staging, dev ]
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -57,7 +55,7 @@ jobs:
     name: Deploy to Dev
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev' || (github.event_name == 'pull_request' && github.base_ref == 'dev')
+    if: github.ref == 'refs/heads/dev'
 
     steps:
       - uses: actions/checkout@v3
@@ -89,7 +87,7 @@ jobs:
     name: Deploy to Staging
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/staging' || (github.event_name == 'pull_request' && github.base_ref == 'staging')
+    if: github.ref == 'refs/heads/staging'
 
     steps:
       - uses: actions/checkout@v3
@@ -121,7 +119,7 @@ jobs:
     name: Deploy to Production
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    if: github.ref == 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v3

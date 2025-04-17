@@ -1,17 +1,4 @@
 version = 0.1
-[staging]
-[staging.deploy]
-[default.deploy.parameters]
-stack_name = "task-management-system"
-s3_bucket = "task-management-sam-deployment-bucket"
-s3_prefix = "task-management-system"
-region = "eu-central-1"
-confirm_changeset = true
-capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"staging\" AdminEmail=\"julius.agbame@amalitech.com\""
-resolve_s3 = true
-image_repositories = []
-
 [dev]
 [dev.deploy]
 [dev.deploy.parameters]
