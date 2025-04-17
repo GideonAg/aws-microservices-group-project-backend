@@ -466,6 +466,12 @@ Resources:
                 - !Ref TaskDeadlineNotificationTopic
                 - !Ref ClosedTaskNotificationTopic
                 - !Ref ReopenedTasksNotificationTopic
+      DefinitionSubstitutions:
+        TaskAssignmentNotificationTopic: !Ref TaskAssignmentNotificationTopic
+        TaskDeadlineNotificationTopic: !Ref TaskDeadlineNotificationTopic
+        ClosedTaskNotificationTopic: !Ref ClosedTaskNotificationTopic
+        TaskCompleteNotificationTopic: !Ref TaskCompleteNotificationTopic
+        ReopenedTasksNotificationTopic: !Ref ReopenedTasksNotificationTopic
 
   #######################
   # EventBridge Resources
