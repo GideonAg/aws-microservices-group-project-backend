@@ -150,6 +150,25 @@ Resources:
       TopicName: !Sub TaskAssignmentNotificationTopic-${StageName}
       DisplayName: Task Assignment
 
+  TaskAssignmentNotificationTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref TaskAssignmentNotificationTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - sns:Subscribe
+              - sns:Receive
+            Resource: !Ref TaskAssignmentNotificationTopic
+            Condition:
+              StringEquals:
+                sns:Protocol: "email"
+
   TaskDeadlineNotificationTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -379,11 +398,21 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:UpdateItem
-              Resource: !GetAtt TaskTable.Arn
+                - dynamodb:GetItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
             - Effect: Allow
               Action:
                 - sqs:SendMessage
               Resource: !GetAtt TasksQueue.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+              Resource: !Ref TaskAssignmentNotificationTopic
       Events:
         ReassignTask:
           Type: Api
@@ -496,7 +525,7 @@ Resources:
                 - !Ref TaskAssignmentNotificationTopic
                 - !Ref TaskDeadlineNotificationTopic
                 - !Ref ClosedTaskNotificationTopic
-                - !Ref ReopenedTasksNotificationTopic
+                - !Ref TaskCompleteNotificationTopic
 
   #######################
   # EventBridge Resources

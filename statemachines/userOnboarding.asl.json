@@ -12,7 +12,7 @@
                             "Type": "Task",
                             "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
                             "Parameters": {
-                                "TopicArn.$": "States.Format('{}', $.taskAssignmentTopicArn)",
+                                "TopicArn": "${TaskAssignmentNotificationTopicArn}",
                                 "Protocol": "email",
                                 "Endpoint.$": "$.email",
                                 "Attributes": {
@@ -30,7 +30,7 @@
                             "Type": "Task",
                             "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
                             "Parameters": {
-                                "TopicArn.$": "States.Format('{}', $.taskDeadlineNotificationTopicArn)",
+                                "TopicArn": "${TaskDeadlineNotificationTopicArn}",
                                 "Protocol": "email",
                                 "Endpoint.$": "$.email",
                                 "Attributes": {
@@ -48,7 +48,7 @@
                             "Type": "Task",
                             "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
                             "Parameters": {
-                                "TopicArn": "${ClosedTaskNotificationTopic}",
+                                "TopicArn": "${ClosedTaskNotificationTopicArn}",
                                 "Protocol": "email",
                                 "Endpoint.$": "$.email",
                                 "Attributes": {
@@ -77,7 +77,7 @@
                             "Type": "Task",
                             "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
                             "Parameters": {
-                                "TopicArn": "${TaskCompleteNotificationTopic}",
+                                "TopicArn": "${TaskCompleteNotificationTopicArn}",
                                 "Protocol": "email",
                                 "Endpoint.$": "$.email",
                                 "Attributes": {
