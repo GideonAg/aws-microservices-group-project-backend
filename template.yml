@@ -519,10 +519,10 @@ Resources:
     Properties:
       DefinitionUri: statemachines/userOnboarding.asl.json
       DefinitionSubstitutions:
-        TaskAssignmentNotificationTopicArn: !Ref TaskAssignmentNotificationTopic
-        TaskDeadlineNotificationTopicArn: !Ref TaskDeadlineNotificationTopic
-        ClosedTaskNotificationTopicArn: !Ref ClosedTaskNotificationTopic
-        TaskCompleteNotificationTopicArn: !Ref TaskCompleteNotificationTopic
+        TaskAssignmentNotificationTopic: !Ref TaskAssignmentNotificationTopic
+        TaskDeadlineNotificationTopic: !Ref TaskDeadlineNotificationTopic
+        ClosedTaskNotificationTopic: !Ref ClosedTaskNotificationTopic
+        TaskCompleteNotificationTopic: !Ref TaskCompleteNotificationTopic
         ReopenedTasksNotificationTopic: !Ref ReopenedTasksNotificationTopic
       Type: STANDARD
       Policies:
