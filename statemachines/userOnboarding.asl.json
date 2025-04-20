@@ -16,7 +16,9 @@
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
                 "Attributes": {
-                  "FilterPolicy": "{\"userId\": [\"$.userId\"]}"
+                  "FilterPolicy": {
+                    "userId.$": "States.Array($.userId)"
+                  }
                 }
               },
               "End": true
@@ -34,7 +36,9 @@
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
                 "Attributes": {
-                  "FilterPolicy": "{\"userId\": [\"$.userId\"]}"
+                  "FilterPolicy": {
+                    "userId.$": "States.Array($.userId)"
+                  }
                 }
               },
               "End": true
@@ -52,7 +56,9 @@
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
                 "Attributes": {
-                  "FilterPolicy": "{\"userId\": [\"$.userId\"]}"
+                  "FilterPolicy": {
+                    "userId.$": "States.Array($.userId)"
+                  }
                 }
               },
               "End": true
@@ -81,7 +87,9 @@
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
                 "Attributes": {
-                  "FilterPolicy": "{\"role\": [\"admin\"]}"
+                  "FilterPolicy": {
+                    "role": ["admin"]
+                  }
                 }
               },
               "End": true
