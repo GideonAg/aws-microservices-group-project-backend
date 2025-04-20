@@ -73,6 +73,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
 
             // Check if task is closed
             Tasks task = taskService.getTask(taskId);
+            // TODO: Check if task is null
             if (!task.getStatus().equals("closed") || task == null) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(403)
@@ -101,6 +102,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
                     .withExpressionAttributeValues(expressionAttributeValues);
 
             dynamoDbClient.updateItem(updateRequest);
+            // update status of the task back to pending
 
             // Publish email with userId message attribute for filtering
             String emailMessage = String.format("You have been reassigned to task %s", task.getName());
