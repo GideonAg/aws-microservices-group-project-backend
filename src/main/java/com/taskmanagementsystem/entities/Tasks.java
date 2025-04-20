@@ -1,7 +1,15 @@
 package com.taskmanagementsystem.entities;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @DynamoDBTable(tableName = "")
 public class Tasks {
     static {
