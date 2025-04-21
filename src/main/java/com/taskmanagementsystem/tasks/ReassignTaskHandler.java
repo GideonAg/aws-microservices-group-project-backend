@@ -74,6 +74,11 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
             // Check if task is closed
             Tasks task = taskService.getTask(taskId);
             // TODO: Check if task is null
+            if(task == null) {
+                return new APIGatewayProxyResponseEvent()
+                        .withStatusCode(403)
+                        .withBody("{\"message\": \"Task does not exist\"}");
+            }
             if (!task.getStatus().equals("closed") || task == null) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(403)
@@ -94,15 +99,17 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
 
             Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
             expressionAttributeValues.put(":newAssignedTo", new AttributeValue(newAssignedToEmail));
+            expressionAttributeValues.put(":pendingStatus", new  AttributeValue("pending"));
 
             UpdateItemRequest updateRequest = new UpdateItemRequest()
                     .withTableName(taskTableName)
                     .withKey(key)
-                    .withUpdateExpression("SET assignedTo = :newAssignedTo")
-                    .withExpressionAttributeValues(expressionAttributeValues);
+                    .withUpdateExpression("SET assignedTo = :newAssignedTo, #taskStatus = :pendingStatus")
+                    .withExpressionAttributeValues(expressionAttributeValues)
+                    .withExpressionAttributeNames(Map.of("#taskStatus", "status"));;
 
             dynamoDbClient.updateItem(updateRequest);
-            // update status of the task back to pending
+            // TODO:update status of the task back to pending
 
             // Publish email with userId message attribute for filtering
             String emailMessage = String.format("You have been reassigned to task %s", task.getName());
