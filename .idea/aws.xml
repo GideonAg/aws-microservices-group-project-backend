@@ -5,6 +5,7 @@
     <option name="activeRegion" value="us-east-1" />
     <option name="recentlyUsedProfiles">
       <list>
+        <option value="profile:MawuleAdmin" />
         <option value="profile:default" />
       </list>
     </option>
@@ -13,5 +14,8 @@
         <option value="us-east-1" />
       </list>
     </option>
+  </component>
+  <component name="explorerToolWindow">
+    <option name="selectedTab" value="Explorer" />
   </component>
 </project>

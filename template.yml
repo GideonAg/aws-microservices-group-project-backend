@@ -310,6 +310,11 @@ Resources:
               Action:
                 - sqs:SendMessage
               Resource: !GetAtt TasksQueue.Arn
+                # Add this new statement for Cognito permissions
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+              Resource: !GetAtt UserPool.Arn
       Events:
         CreateTask:
           Type: Api
