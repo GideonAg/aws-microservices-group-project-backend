@@ -73,7 +73,6 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
 
             // Check if task is closed
             Tasks task = taskService.getTask(taskId);
-            // TODO: Check if task is null
             if(task == null) {
                 return new APIGatewayProxyResponseEvent()
                         .withStatusCode(403)
@@ -104,7 +103,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
             UpdateItemRequest updateRequest = new UpdateItemRequest()
                     .withTableName(taskTableName)
                     .withKey(key)
-                    .withUpdateExpression("SET assignedTo = :newAssignedTo, #taskStatus = :pendingStatus")
+                    .withUpdateExpression("SET assignedUserEmail = :newAssignedTo, #taskStatus = :pendingStatus")
                     .withExpressionAttributeValues(expressionAttributeValues)
                     .withExpressionAttributeNames(Map.of("#taskStatus", "status"));;
 

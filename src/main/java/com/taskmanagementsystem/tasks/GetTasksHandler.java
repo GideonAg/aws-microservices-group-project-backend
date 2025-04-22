@@ -79,18 +79,18 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 tasks = dynamoDBMapper.scan(Tasks.class, new DynamoDBScanExpression());
                 context.getLogger().log("Admin user - fetched all tasks: " + tasks.size());
             } else {
-                // For regular users, query by assignedTo
+                // For regular users, query by assignedUserEmail
                 Map<String, AttributeValue> eav = new HashMap<>();
                 eav.put(":email", new AttributeValue().withS(userEmail));
                 
                 DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
                         .withIndexName("AssigneeIndex")
                         .withConsistentRead(false)
-                        .withKeyConditionExpression("assignedTo = :email")
+                        .withKeyConditionExpression("assignedUserEmail = :email")
                         .withExpressionAttributeValues(eav);
 
                 // Additional debug logging to see what's happening
-                context.getLogger().log("Query params: assignedTo = " + userEmail);
+                context.getLogger().log("Query params: assignedUserEmail = " + userEmail);
                 
                 tasks = dynamoDBMapper.query(Tasks.class, taskQuery);
                 context.getLogger().log("Regular user - tasks found: " + tasks.size());
