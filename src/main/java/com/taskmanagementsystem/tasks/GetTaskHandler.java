@@ -16,9 +16,9 @@ public class GetTaskHandler implements RequestHandler<APIGatewayProxyRequestEven
     private final TaskService taskService;
     private final ObjectMapper objectMapper;
 
-    public GetTaskHandler(TaskService taskService, ObjectMapper objectMapper) {
-        this.taskService = taskService;
-        this.objectMapper = objectMapper;
+    public GetTaskHandler() {
+        this.taskService = new TaskService();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override

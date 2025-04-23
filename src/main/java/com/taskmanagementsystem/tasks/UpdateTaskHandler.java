@@ -67,16 +67,25 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
             Map<String, Object> authorizeMap = requestEvent.getRequestContext().getAuthorizer();
             JsonNode claimsNode = objectMapper.valueToTree(authorizeMap.get("claims"));
 
-            Users user = Users.builder().
-                    email(claimsNode.get("email").asText()).
-                    isAdmin(claimsNode.get("admin").asBoolean()).
-                    build();
+            if (!claimsNode.has("email") || !claimsNode.has("admin")) {
+                return createServerErrorResponse("Missing required fields in claims");
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, String> claims = (Map<String, String>) authorizeMap.get("claims");
+            String userEmail = claims.get("email");
+            String userRole = claims.get("custom:role");
+            boolean isAdmin = "admin".equals(userRole);
+
+            Users user = Users.builder()
+                    .email(userEmail)
+                    .isAdmin(isAdmin)
+                    .build();
 
             Map<String, AttributeValue> key = new HashMap<>();
             key.put("taskId", AttributeValue.builder().s(taskId).build());
 
             GetItemRequest getItemRequest = GetItemRequest.builder()
-                    .tableName(System.getenv("TASK_TABLE"))
+                    .tableName(System.getProperty("TASK_TABLE", "TaskTable"))
                     .key(key)
                     .build();
 

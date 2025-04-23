@@ -4,6 +4,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -11,7 +12,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.entities.Tasks;
-import com.taskmanagementsystem.entities.Users;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 import com.taskmanagementsystem.util.HeadersUtil;
 
@@ -23,7 +23,6 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
 
     private final DynamoDBMapper dynamoDBMapper;
     private final ObjectMapper objectMapper;
-    private final String userTableName;
 
     public GetTasksHandler() {
         AmazonDynamoDB dynamoDBClient = DynamoDBUtil.getDynamoDBClient();
@@ -36,7 +35,6 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 .build();
         this.dynamoDBMapper = new DynamoDBMapper(dynamoDBClient, config);
         this.objectMapper = new ObjectMapper();
-        this.userTableName = System.getenv("USER_TABLE");
     }
 
     @Override
@@ -60,39 +58,44 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 return response;
             }
 
-            String cognitoUsername = claims.get("sub");
-            if (cognitoUsername == null || cognitoUsername.isEmpty()) {
+            // Extract the email directly from claims
+            String userEmail = claims.get("email");
+            String userRole = claims.get("custom:role");
+            boolean isAdmin = "admin".equals(userRole);
+            
+            if (userEmail == null || userEmail.isEmpty()) {
                 response.setStatusCode(401);
-                response.setBody("{\"message\": \"Unauthorized: User ID not found in token\"}");
+                response.setBody("{\"message\": \"Unauthorized: Email not found in token\"}");
                 return response;
             }
+            
+            context.getLogger().log("User email: " + userEmail);
+            context.getLogger().log("User role: " + userRole);
 
-            DynamoDBQueryExpression<Users> userQuery = new DynamoDBQueryExpression<Users>()
-                    .withIndexName("EmailIndex")
-                    .withConsistentRead(false)
-                    .withKeyConditionExpression("cognitoUsername = :cognitoUsername")
-                    .withExpressionAttributeValues(Map.of(
-                            ":cognitoUsername", new AttributeValue().withS(cognitoUsername)
-                    ));
+            List<Tasks> tasks;
+            
+            // For admins, fetch all tasks
+            if (isAdmin) {
+                // Scan all tasks if the user is an admin
+                tasks = dynamoDBMapper.scan(Tasks.class, new DynamoDBScanExpression());
+                context.getLogger().log("Admin user - fetched all tasks: " + tasks.size());
+            } else {
+                // For regular users, query by assignedUserEmail
+                Map<String, AttributeValue> eav = new HashMap<>();
+                eav.put(":email", new AttributeValue().withS(userEmail));
+                
+                DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
+                        .withIndexName("AssigneeIndex")
+                        .withConsistentRead(false)
+                        .withKeyConditionExpression("assignedUserEmail = :email")
+                        .withExpressionAttributeValues(eav);
 
-            List<Users> users = dynamoDBMapper.query(Users.class, userQuery);
-            if (users.isEmpty()) {
-                response.setStatusCode(404);
-                response.setBody("{\"message\": \"User not found\"}");
-                return response;
+                // Additional debug logging to see what's happening
+                context.getLogger().log("Query params: assignedUserEmail = " + userEmail);
+                
+                tasks = dynamoDBMapper.query(Tasks.class, taskQuery);
+                context.getLogger().log("Regular user - tasks found: " + tasks.size());
             }
-
-            String userEmail = users.getFirst().getEmail();
-
-            DynamoDBQueryExpression<Tasks> taskQuery = new DynamoDBQueryExpression<Tasks>()
-                    .withIndexName("AssigneeIndex")
-                    .withConsistentRead(false)
-                    .withKeyConditionExpression("assignedTo = :email")
-                    .withExpressionAttributeValues(Map.of(
-                            ":email", new AttributeValue().withS(userEmail)
-                    ));
-
-            List<Tasks> tasks = dynamoDBMapper.query(Tasks.class, taskQuery);
 
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("statusCode", 200);
@@ -104,6 +107,8 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
             return response;
 
         } catch (Exception e) {
+            context.getLogger().log("Error retrieving tasks: " + e.getMessage());
+            e.printStackTrace();
             response.setStatusCode(500);
             try {
                 response.setBody(objectMapper.writeValueAsString(Map.of(

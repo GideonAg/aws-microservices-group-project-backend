@@ -61,6 +61,13 @@
         <version>${aws.java.sdk.version}</version>
     </dependency>
 
+    <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/sfn -->
+    <dependency>
+        <groupId>software.amazon.awssdk</groupId>
+        <artifactId>sfn</artifactId>
+        <version>${aws.java.sdk.version}</version>
+    </dependency>
+
     <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
