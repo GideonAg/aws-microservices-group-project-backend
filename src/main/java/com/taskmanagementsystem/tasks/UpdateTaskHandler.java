@@ -70,10 +70,15 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
             if (!claimsNode.has("email") || !claimsNode.has("admin")) {
                 return createServerErrorResponse("Missing required fields in claims");
             }
+            @SuppressWarnings("unchecked")
+            Map<String, String> claims = (Map<String, String>) authorizeMap.get("claims");
+            String userEmail = claims.get("email");
+            String userRole = claims.get("custom:role");
+            boolean isAdmin = "admin".equals(userRole);
 
             Users user = Users.builder()
-                    .email(claimsNode.get("email").asText())
-                    .isAdmin(claimsNode.has("admin") && claimsNode.get("admin").asBoolean())
+                    .email(userEmail)
+                    .isAdmin(isAdmin)
                     .build();
 
             Map<String, AttributeValue> key = new HashMap<>();

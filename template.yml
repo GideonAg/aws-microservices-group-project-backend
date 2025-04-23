@@ -519,6 +519,36 @@ Resources:
                 - sns:Publish
               Resource: !Ref ClosedTaskNotificationTopic
 
+  CloseTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.CloseTaskHandler::handleRequest
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ClosedTaskNotificationTopic
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        CloseTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /tasks/{taskId}/close
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+
   UserOnboardingStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
