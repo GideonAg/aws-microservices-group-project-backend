@@ -16,8 +16,8 @@ import com.taskmanagementsystem.entities.Tasks;
 import com.taskmanagementsystem.services.TaskService;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 import com.taskmanagementsystem.util.SnsPublisher;
-import com.taskmanagementsystem.util.SqsMessenger;
-import com.taskmanagementsystem.util.TaskAssignmentMessage;
+// import com.taskmanagementsystem.util.SqsMessenger;
+// import com.taskmanagementsystem.util.TaskAssignmentMessage;
 import com.taskmanagementsystem.util.UserUtils;
 
 
@@ -26,23 +26,23 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
     private final AmazonDynamoDB dynamoDbClient;
     private final String taskTableName;
     private final String userTableName;
-    private final String queueUrl;
+    // private final String queueUrl;
     private final ObjectMapper objectMapper;
     private final TaskService taskService;
     private final String taskAssignmentTopic;
     private final SnsPublisher snsPublisher;
-    private final SqsMessenger sqsMessenger;
+    // private final SqsMessenger sqsMessenger;
 
     public ReassignTaskHandler() {
         this.dynamoDbClient = DynamoDBUtil.getDynamoDBClient();
         this.taskTableName = System.getenv("TASK_TABLE");
         this.userTableName = System.getenv("USER_TABLE");
-        this.queueUrl = System.getenv("TASKS_QUEUE_URL");
+        // this.queueUrl = System.getenv("TASKS_QUEUE_URL");
         this.objectMapper = new ObjectMapper();
         this.taskService = new TaskService();
         this.taskAssignmentTopic = System.getenv("TASK_ASSIGNMENT_TOPIC_ARN");
         this.snsPublisher = new SnsPublisher();
-        this.sqsMessenger = new SqsMessenger();
+        // this.sqsMessenger = new SqsMessenger();
     }
 
     @Override
@@ -92,12 +92,12 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
 
             Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
             expressionAttributeValues.put(":newAssignedTo", new AttributeValue(newAssignedToEmail));
-            expressionAttributeValues.put(":pendingStatus", new  AttributeValue("pending"));
+            expressionAttributeValues.put(":openStatus", new  AttributeValue("open"));
 
             UpdateItemRequest updateRequest = new UpdateItemRequest()
                     .withTableName(taskTableName)
                     .withKey(key)
-                    .withUpdateExpression("SET assignedUserEmail = :newAssignedTo, #taskStatus = :pendingStatus")
+                    .withUpdateExpression("SET assignedUserEmail = :newAssignedTo, #taskStatus = :openStatus")
                     .withExpressionAttributeValues(expressionAttributeValues)
                     .withExpressionAttributeNames(Map.of("#taskStatus", "status"));;
 
@@ -108,8 +108,8 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
             snsPublisher.publishTaskAssignment(taskAssignmentTopic, emailMessage, userId, context);
 
             // Send message to SQS for notification processing
-            TaskAssignmentMessage message = new TaskAssignmentMessage(taskId, newAssignedToEmail);
-            sqsMessenger.sendTaskAssignmentMessage(queueUrl, message, taskId, context);
+            // TaskAssignmentMessage message = new TaskAssignmentMessage(taskId, newAssignedToEmail);
+            // sqsMessenger.sendTaskAssignmentMessage(queueUrl, message, taskId, context);
 
             return new APIGatewayProxyResponseEvent()
                     .withStatusCode(200)
