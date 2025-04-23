@@ -8,7 +8,7 @@ s3_prefix = "task-management-system"
 region = "eu-central-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-parameter_overrides = "StageName=\"dev\" AdminEmail=\"gideon.agbosu@amalitech.com\""
+parameter_overrides = "StageName=\"staging\" AdminEmail=\"gideon.agbosu@amalitech.com\""
 
 [dev]
 [dev.deploy]
