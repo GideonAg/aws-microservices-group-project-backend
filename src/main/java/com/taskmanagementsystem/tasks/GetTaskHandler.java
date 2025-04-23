@@ -1,6 +1,5 @@
 package com.taskmanagementsystem.tasks;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -8,9 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.entities.Tasks;
 import com.taskmanagementsystem.services.TaskService;
-import com.taskmanagementsystem.util.DynamoDBUtil;
+import com.taskmanagementsystem.util.HeadersUtil;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class GetTaskHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -18,18 +16,16 @@ public class GetTaskHandler implements RequestHandler<APIGatewayProxyRequestEven
     private final TaskService taskService;
     private final ObjectMapper objectMapper;
 
-    public GetTaskHandler(TaskService taskService, ObjectMapper objectMapper) {
-        this.taskService = taskService;
-        this.objectMapper = objectMapper;
+    public GetTaskHandler() {
+        this.taskService = new TaskService();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
 
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        response.setHeaders(headers);
+        response.setHeaders(HeadersUtil.getHeaders());
 
         try {
             // Extract taskId from the path parameters

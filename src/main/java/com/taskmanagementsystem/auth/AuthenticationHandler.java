@@ -5,8 +5,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.util.Map;
+import com.taskmanagementsystem.util.HeadersUtil;
 
 public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -15,7 +14,7 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        response.setHeaders(Map.of("Content-Type", "application/json"));
+        response.setHeaders(HeadersUtil.getHeaders());
 
         try {
 
@@ -28,6 +27,12 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
                         .withBody("{\"message\": \"Email is required\"}");
             }
 
+            if (!isValidEmail(email)) {
+                return response
+                        .withStatusCode(400)
+                        .withBody("{\"message\": \"Invalid email format\"}");
+            }
+
             if (password == null || password.trim().isEmpty()) {
                 return response
                         .withStatusCode(400)
@@ -35,14 +40,20 @@ public class AuthenticationHandler implements RequestHandler<APIGatewayProxyRequ
             }
 
             var authResponse = authenticationService.login(email, password);
+            context.getLogger().log("Headers" + response.getHeaders());
             return response
                     .withStatusCode(200)
                     .withBody(mapper.writeValueAsString(authResponse));
 
         } catch (Exception e) {
             response.setStatusCode(500);
-            response.setBody("Internal Server Error");
+            response.setBody(e.getMessage());
             return response;
         }
+    }
+
+    private boolean isValidEmail(String email) {
+        String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+        return email.matches(emailRegex);
     }
 }
