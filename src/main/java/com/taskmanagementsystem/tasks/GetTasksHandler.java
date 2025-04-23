@@ -13,6 +13,7 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.entities.Tasks;
 import com.taskmanagementsystem.util.DynamoDBUtil;
+import com.taskmanagementsystem.util.HeadersUtil;
 
 import java.util.HashMap;
 import java.util.List;
@@ -39,7 +40,7 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent requestEvent, Context context) {
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        response.setHeaders(Map.of("Content-Type", "application/json"));
+        response.setHeaders(HeadersUtil.getHeaders());
 
         try {
             Map<String, Object> authorizer = requestEvent.getRequestContext().getAuthorizer();

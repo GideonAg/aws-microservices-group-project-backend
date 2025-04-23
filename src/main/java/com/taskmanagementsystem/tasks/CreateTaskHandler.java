@@ -13,16 +13,23 @@ import com.taskmanagementsystem.entities.Tasks;
 import com.taskmanagementsystem.util.DynamoDBUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.cognitoidentityprovider.CognitoIdentityProviderClient;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.ListUsersRequest;
 import software.amazon.awssdk.services.cognitoidentityprovider.model.ListUsersResponse;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.MessageAttributeValue;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import software.amazon.awssdk.services.sns.model.PublishResponse;
+import software.amazon.awssdk.services.sns.model.SnsException;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
+import software.amazon.awssdk.services.sqs.model.SqsException;
+
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
@@ -33,6 +40,8 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
     private final String tasksQueueUrl;
     private final CognitoIdentityProviderClient cognitoClient;
     private final String userPoolId;
+    private final String taskAssignmentTopic;
+    private final SnsClient snsClient;
 
     public CreateTaskHandler() {
         AmazonDynamoDB dynamoDBClient = DynamoDBUtil.getDynamoDBClient();
@@ -52,53 +61,36 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
         }
 
         // Create a shared HTTP client
-        UrlConnectionHttpClient httpClient = (UrlConnectionHttpClient) UrlConnectionHttpClient.builder().build();
+//        UrlConnectionHttpClient httpClient = (UrlConnectionHttpClient) UrlConnectionHttpClient.builder().build();
 
         // Set region from environment variables
         String regionStr = System.getenv("REGION");
         Region region = regionStr != null ? Region.of(regionStr) : Region.EU_CENTRAL_1; // Default to EU Central 1
 
-        this.sqsClient = SqsClient.builder()
-                .httpClient(httpClient)
-                .region(region)
-                .build();
+        this.sqsClient = SqsClient.create();
 
         this.tasksQueueUrl = System.getenv("TASKS_QUEUE_URL");
         this.userPoolId = System.getenv("USER_POOL_ID");
-
+        this.taskAssignmentTopic = System.getenv("TASK_ASSIGNMENT_TOPIC_ARN");
+        this.snsClient = SnsClient.create();
         this.cognitoClient = CognitoIdentityProviderClient.builder()
-                .httpClient(httpClient)
                 .region(region)
                 .build();
     }
 
-    // Constructor for testing
-    public CreateTaskHandler(DynamoDBMapper dynamoDBMapper,
-                             SqsClient sqsClient,
-                             String tasksQueueUrl,
-                             CognitoIdentityProviderClient cognitoClient,
-                             String userPoolId) {
-        this.dynamoDBMapper = dynamoDBMapper;
-        this.sqsClient = sqsClient;
-        this.tasksQueueUrl = tasksQueueUrl;
-        this.cognitoClient = cognitoClient;
-        this.userPoolId = userPoolId;
-    }
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent input, Context context) {
-        logger.info("Received request to create task");
+        context.getLogger().log("Received request to create task " + input.getBody());
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         response.setHeaders(createCorsHeaders());
 
         try {
             // Extract user information from the claims
             Map<String, String> claims = getClaims(input);
-            logger.info("Claims received: {}", claims);
 
             // Check if the user is authorized (must be logged in)
             if (claims.isEmpty()) {
-                logger.error("No authorization claims found in request");
                 return createErrorResponse(response, 401, "Unauthorized: Authentication required");
             }
 
@@ -112,11 +104,10 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
             // Get user role
             String userRole = claims.get("custom:role");
 
-            logger.info("User email: {}, role: {}", createdBy, userRole);
+            context.getLogger().log("User email: " + createdBy + " role: " +  userRole);
 
             // Verify user identity was found
             if (createdBy == null || createdBy.isEmpty()) {
-                logger.error("User identity not found in token claims");
                 return createErrorResponse(response, 403, "Unauthorized: User information not found");
             }
 
@@ -128,30 +119,47 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
 
             // Parse the task from the request body
             TaskRequest taskRequest = objectMapper.readValue(input.getBody(), TaskRequest.class);
-            logger.info("Successfully parsed task request: {}", taskRequest.getName());
 
             // Validate task data
             if (!isValidTask(taskRequest)) {
-                logger.error("Invalid task data provided: missing name or responsibility");
                 return createErrorResponse(response, 400, "Invalid task data. Name and responsibility are required.");
             }
 
             // Verify assigned user exists
             if (taskRequest.getAssignedUserEmail() != null && !taskRequest.getAssignedUserEmail().isEmpty()) {
-                logger.info("Verifying assigned user exists: {}", taskRequest.getAssignedUserEmail());
-                if (!userExistsInCognito(taskRequest.getAssignedUserEmail())) {
-                    logger.error("Assigned user does not exist in Cognito: {}", taskRequest.getAssignedUserEmail());
-                    return createErrorResponse(response, 400, "The assigned user does not exist Stop this!!");
+                context.getLogger().log("Verifying assigned user exists: " + taskRequest.getAssignedUserEmail());
+                if (!userExistsInCognito(taskRequest.getAssignedUserEmail(),context)) {
+                    return createErrorResponse(response, 400, "The assigned user does not exist.");
                 }
             }
 
             // Create and save task
             Tasks task = createTaskFromRequest(taskRequest, createdBy);
             dynamoDBMapper.save(task);
-            logger.info("Task saved successfully to the table with ID: {}", task.getTaskId());
+            context.getLogger().log("Task saved successfully to the table with ID: " + task.getTaskId());
+
+            // Publish email with useremail message attribute for filtering
+            String emailMessage = String.format("You have been assigned to task %s", task.getName());
+            try {
+                Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+                messageAttributes.put("userId", MessageAttributeValue.builder()
+                        .dataType("String")
+                        .stringValue(taskRequest.getAssignedUserEmail())
+                        .build());
+
+                PublishRequest publishRequest = PublishRequest.builder()
+                        .message(emailMessage)
+                        .topicArn(taskAssignmentTopic)
+                        .messageAttributes(messageAttributes)
+                        .build();
+
+                PublishResponse publishResponse = snsClient.publish(publishRequest);
+            } catch (SnsException e) {
+                context.getLogger().log("SNS publish failed: " + e.awsErrorDetails().errorMessage());
+            }
 
             // Send task to SQS for notification processing
-            sendTaskToQueue(task, context);
+             sendTaskToQueue(task, context);
 
             // Return success response with the created task
             return createSuccessResponse(response, task);
@@ -165,22 +173,19 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
         }
     }
 
-    private boolean userExistsInCognito(String email){
+    private boolean userExistsInCognito(String email, Context context){
         try{
-            logger.info("Checking if user exists in Cognito: {}", email);
             ListUsersRequest request = ListUsersRequest.builder()
                     .userPoolId(userPoolId)
                     .filter("email = \"" + email + "\"")
                     .limit(1)  // We only need to know if at least one exists
                     .build();
 
-            logger.info("User pool ID: {}", userPoolId);
+            context.getLogger().log("User pool ID: " + userPoolId);
             ListUsersResponse response = cognitoClient.listUsers(request);
             boolean exists = !response.users().isEmpty();
-            logger.info("User exists: {}", exists);
             return exists;
         } catch (Exception e){
-            logger.error("Error checking user in Cognito", e);
             // In case of error, log it but assume user doesn't exist for safety
             return false;
         }
@@ -205,21 +210,19 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
         try {
             // Log request ID from context for traceability
             String requestId = context.getAwsRequestId();
-            logger.info("[RequestID: {}] Attempting to send task to queue URL: {}", requestId, tasksQueueUrl);
 
             if (tasksQueueUrl == null || tasksQueueUrl.isEmpty()) {
-                logger.error("[RequestID: {}] Queue URL is null or empty - check TASKS_QUEUE_URL environment variable", requestId);
                 return;
             }
 
             String messageBody = objectMapper.writeValueAsString(task);
-            logger.info("[RequestID: {}] Task serialized to JSON successfully", requestId);
+            context.getLogger().log ("[RequestID: {}] Task serialized to JSON successfully " + requestId + " messageBody " + messageBody);
 
-            String messageGroupId = task.getResponsibility().replace("\\s+", "_"); // Group by responsibility
-            String messageDeduplicationId = task.getTaskId(); // Use taskId for deduplication
+            String messageGroupId = "TaskGroupAssignment"; // Group by responsibility
+            String messageDeduplicationId = UUID.randomUUID().toString(); // Use taskId for deduplication
 
-            logger.info("[RequestID: {}] Preparing to send message with groupId: {}, deduplicationId: {}",
-                    requestId, messageGroupId, messageDeduplicationId);
+            context.getLogger().log ("Preparing to send message with groupId: " + messageGroupId + " deduplicationId: " + messageDeduplicationId);
+
 
             SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
                     .queueUrl(tasksQueueUrl)
@@ -227,30 +230,22 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                     .messageGroupId(messageGroupId)
                     .messageDeduplicationId(messageDeduplicationId)
                     .build();
-
-            // Log that we're about to send the message
-            logger.info("[RequestID: {}] Sending message to SQS with {} ms remaining",
-                    requestId, context.getRemainingTimeInMillis());
-
             // Send the message and capture the response
             var sendMessageResponse = sqsClient.sendMessage(sendMessageRequest);
+            context.getLogger().log("SQS Response: " + sendMessageResponse.toString());
 
             // Log successful send with message ID
-            logger.info("[RequestID: {}] Task sent to queue successfully. Message ID: {}",
-                    requestId, sendMessageResponse.messageId());
+            context.getLogger().log("[RequestID: {}] " + requestId + " Task sent to queue successfully. Message ID: " +
+                     sendMessageResponse.messageId());
 
         } catch (Exception e) {
             // More detailed error logging
             String requestId = context.getAwsRequestId();
-            logger.error("[RequestID: {}] Failed to send task to queue. Error: {}, Message: {}",
-                    requestId, e.getClass().getName(), e.getMessage(), e);
-
             // If it's an AWS service exception, log additional details
-            if (e instanceof software.amazon.awssdk.services.sqs.model.SqsException) {
-                software.amazon.awssdk.services.sqs.model.SqsException sqsEx =
-                        (software.amazon.awssdk.services.sqs.model.SqsException) e;
-                logger.error("[RequestID: {}] SQS Error details - Status code: {}, Request ID: {}",
-                        requestId, sqsEx.statusCode(), sqsEx.requestId());
+            if (e instanceof SqsException) {
+                SqsException sqsEx =
+                        (SqsException) e;
+                context.getLogger().log("[RequestID: {}] " + requestId + " SQS Error details - Status code: " + sqsEx.statusCode() + " Request ID: " + sqsEx.requestId());
             }
         }
     }

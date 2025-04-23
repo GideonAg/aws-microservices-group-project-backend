@@ -7,8 +7,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.taskmanagementsystem.entities.Tasks;
 import com.taskmanagementsystem.services.TaskService;
+import com.taskmanagementsystem.util.HeadersUtil;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class GetTaskHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
@@ -23,11 +23,9 @@ public class GetTaskHandler implements RequestHandler<APIGatewayProxyRequestEven
 
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
 
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        response.setHeaders(headers);
+        response.setHeaders(HeadersUtil.getHeaders());
 
         try {
             // Extract taskId from the path parameters
