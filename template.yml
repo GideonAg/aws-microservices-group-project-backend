@@ -212,6 +212,32 @@ Resources:
       FifoQueue: true
       ContentBasedDeduplication: true
 
+    ##############################
+  # Admin Email Subscriptions
+  ##############################
+  AdminSubscriptionCloseNotificationTopic:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref ClosedTaskNotificationTopic
+      Protocol: email
+      Endpoint: !Ref AdminEmail
+      FilterPolicy:
+        role:
+          - "admin"
+
+  AdminSubscriptionCompleteTaskNotification:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref TaskCompleteNotificationTopic
+      Protocol: email
+      Endpoint: !Ref AdminEmail
+      FilterPolicy:
+        role:
+          - "admin"
+
+
+
+
   #######################
   # API Gateway
   #######################
