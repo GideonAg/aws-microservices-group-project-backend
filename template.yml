@@ -21,6 +21,7 @@ Globals:
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
         USER_ONBOARDING_STATE_MACHINE_ARN: !GetAtt UserOnboardingStateMachine.Arn
+        EXPIRED_TASK_STATE_MACHINE_ARN: !GetAtt TaskExpirationStateMachine.Arn
         REGION: !Ref AWS::Region
 
 Parameters:
@@ -499,8 +500,12 @@ Resources:
               Resource: !Ref ClosedTaskNotificationTopic
             - Effect: Allow
               Action:
-                - dynamodb:UpdateItem
-              Resource: !GetAtt TaskTable.Arn
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource: 
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
             - Effect: Allow
               Action:
                 - states:StartExecution
@@ -511,6 +516,9 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: statemachines/taskExpiration.asl.json
+      DefinitionSubstitutions:
+        ClosedTaskNotificationTopic: !Ref ClosedTaskNotificationTopic
+        TaskTable: !Ref TaskTable
       Type: STANDARD
       Policies:
         - Version: "2012-10-17"
@@ -599,6 +607,26 @@ Resources:
       FunctionName: !Ref TaskDeadlineNotificationFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DeadlineReminderRule.Arn
+
+  ExpiredTaskRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ExpiredTaskRule-${StageName}
+      Description: "Rule to check for expired tasks"
+      ScheduleExpression: "rate(5 minutes)"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ProcessExpiredTaskFunction.Arn
+          Id: "TaskDeadlineFunction"
+
+  ExpiredTaskRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ProcessExpiredTaskFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ExpiredTaskRule.Arn
+
 
   
 

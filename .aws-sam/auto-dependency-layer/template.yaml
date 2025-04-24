@@ -34,6 +34,10 @@ Globals:
           Fn::GetAtt:
           - UserOnboardingStateMachine
           - Arn
+        EXPIRED_TASK_STATE_MACHINE_ARN:
+          Fn::GetAtt:
+          - TaskExpirationStateMachine
+          - Arn
         REGION:
           Ref: AWS::Region
 Parameters:
@@ -531,13 +535,14 @@ Resources:
           - dynamodb:UpdateItem
           - dynamodb:GetItem
           - dynamodb:Query
-          Resources:
+          Resource:
           - Fn::GetAtt:
             - TaskTable
             - Arn
           - Fn::GetAtt:
             - UserTable
             - Arn
+          - Fn::Sub: ${UserTable.Arn}/index/EmailIndex
       Events:
         SQSEvent:
           Type: SQS
@@ -596,11 +601,16 @@ Resources:
             Ref: ClosedTaskNotificationTopic
         - Effect: Allow
           Action:
-          - dynamodb:UpdateItem
+          - dynamodb:Query
+          - dynamodb:Scan
           Resource:
-            Fn::GetAtt:
+          - Fn::GetAtt:
             - TaskTable
             - Arn
+          - Fn::GetAtt:
+            - UserTable
+            - Arn
+          - Fn::Sub: ${UserTable.Arn}/index/EmailIndex
         - Effect: Allow
           Action:
           - states:StartExecution
@@ -618,6 +628,11 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: ../../statemachines/taskExpiration.asl.json
+      DefinitionSubstitutions:
+        ClosedTaskNotificationTopic:
+          Ref: ClosedTaskNotificationTopic
+        TaskTable:
+          Ref: TaskTable
       Type: STANDARD
       Policies:
       - Version: '2012-10-17'
@@ -729,6 +744,31 @@ Resources:
       SourceArn:
         Fn::GetAtt:
         - DeadlineReminderRule
+        - Arn
+  ExpiredTaskRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name:
+        Fn::Sub: ExpiredTaskRule-${StageName}
+      Description: Rule to check for expired tasks
+      ScheduleExpression: rate(5 minutes)
+      State: ENABLED
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - ProcessExpiredTaskFunction
+          - Arn
+        Id: TaskDeadlineFunction
+  ExpiredTaskRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: ProcessExpiredTaskFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - ExpiredTaskRule
         - Arn
   AwsSamAutoDependencyLayerNestedStack:
     DeletionPolicy: Delete
