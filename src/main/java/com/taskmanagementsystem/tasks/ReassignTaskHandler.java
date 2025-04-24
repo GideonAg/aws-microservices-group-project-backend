@@ -99,7 +99,7 @@ public class ReassignTaskHandler implements RequestHandler<APIGatewayProxyReques
                     .withKey(key)
                     .withUpdateExpression("SET assignedUserEmail = :newAssignedTo, #taskStatus = :openStatus")
                     .withExpressionAttributeValues(expressionAttributeValues)
-                    .withExpressionAttributeNames(Map.of("#taskStatus", "status"));;
+                    .withExpressionAttributeNames(Map.of("#taskStatus", "status"));
 
             dynamoDbClient.updateItem(updateRequest);
 

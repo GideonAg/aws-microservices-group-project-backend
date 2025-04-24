@@ -5,6 +5,8 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.taskmanagementsystem.util.HeadersUtil;
+
 import software.amazon.awssdk.http.HttpStatusCode;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
@@ -36,7 +38,7 @@ public class CloseTaskHandler implements RequestHandler<APIGatewayProxyRequestEv
     @Override
     public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent request, Context context) {
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
-        response.setHeaders(Map.of("Content-Type", "application/json"));
+        response.setHeaders(HeadersUtil.getHeaders());
 
         try {
             String taskId = request.getPathParameters().get("taskId");
@@ -74,16 +76,21 @@ public class CloseTaskHandler implements RequestHandler<APIGatewayProxyRequestEv
             long updatedAtTimestamp = Instant.now().getEpochSecond(); // Unix timestamp for updatedAt
             String closedAtString = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME); // ISO string for closedAt
 
+            Map<String, String> expressionAttributeNames = new HashMap<>();
+            expressionAttributeNames.put("#status", "status");
+
             Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
             expressionAttributeValues.put(":isClosed", AttributeValue.builder().bool(true).build());
             expressionAttributeValues.put(":closedAt", AttributeValue.builder().s(closedAtString).build());
             expressionAttributeValues.put(":adminComment", AttributeValue.builder().s(closeTaskRequest.adminComment()).build());
             expressionAttributeValues.put(":updatedAt", AttributeValue.builder().n(String.valueOf(updatedAtTimestamp)).build());
+            expressionAttributeValues.put(":statusVal", AttributeValue.builder().s(String.valueOf("closed")).build());
 
             UpdateItemRequest updateItemRequest = UpdateItemRequest.builder()
                     .tableName(taskTable)
                     .key(key)
-                    .updateExpression("SET isClosed = :isClosed, closedAt = :closedAt, adminComment = :adminComment, updatedAt = :updatedAt")
+                    .updateExpression("SET isClosed = :isClosed, closedAt = :closedAt, adminComment = :adminComment, updatedAt = :updatedAt, #status = :statusVal")
+                    .expressionAttributeNames(expressionAttributeNames)
                     .expressionAttributeValues(expressionAttributeValues)
                     .returnValues("ALL_NEW")
                     .build();

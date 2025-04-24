@@ -61,6 +61,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             //Check if authorized user is an admin
                
             Map<String, Object> authorizer = input.getRequestContext().getAuthorizer();
+            @SuppressWarnings("unchecked")
             Map<String, String> claims = (Map<String, String>) authorizer.get("claims");
             String role = claims.get("custom:role");
             if(!"admin".equals((role))) {
