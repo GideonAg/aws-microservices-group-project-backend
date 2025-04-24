@@ -45,7 +45,7 @@
                                 "MessageAttributes": {
                                     "userId": {
                                         "DataType": "String",
-                                        "StringValue.$": "$.taskDetails.Attributes.assignedUserEmail.S"
+                                        "StringValue.$": "$.userId"
                                     },
                                     "notificationType": {
                                         "DataType": "String",
