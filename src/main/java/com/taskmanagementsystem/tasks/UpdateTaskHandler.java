@@ -30,6 +30,7 @@ import com.taskmanagementsystem.entities.Tasks;
 
 
 import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sns.model.MessageAttributeValue;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 
 
@@ -131,9 +132,16 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                         notificationPayload.put("completedBy",  task.getAssignedUserEmail());
                         notificationPayload.put("userComment", messageBody.get("userComment").asText());
 
+                         Map<String, MessageAttributeValue> messageAttributes = new HashMap<>();
+                            messageAttributes.put("role", MessageAttributeValue.builder()
+                                    .dataType("String")
+                                    .stringValue("admin")
+                                    .build());
+
                         PublishRequest publishRequest = PublishRequest.builder()
                                 .topicArn(taskCompleteTopicArn)
                                 .message(objectMapper.writeValueAsString(notificationPayload))
+                                .messageAttributes(messageAttributes)
                                 .build();
 
                         snsClient.publish(publishRequest);
