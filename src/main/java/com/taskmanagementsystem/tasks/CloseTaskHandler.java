@@ -13,7 +13,9 @@ import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sns.model.PublishRequest;
 import software.amazon.awssdk.regions.Region;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,11 +70,15 @@ public class CloseTaskHandler implements RequestHandler<APIGatewayProxyRequestEv
             Map<String, AttributeValue> key = new HashMap<>();
             key.put("taskId", AttributeValue.builder().s(taskId).build());
 
+            // Convert LocalDateTime to appropriate formats
+            long updatedAtTimestamp = Instant.now().getEpochSecond(); // Unix timestamp for updatedAt
+            String closedAtString = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME); // ISO string for closedAt
+
             Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
             expressionAttributeValues.put(":isClosed", AttributeValue.builder().bool(true).build());
-            expressionAttributeValues.put(":closedAt", AttributeValue.builder().n(String.valueOf(LocalDateTime.now())).build());
+            expressionAttributeValues.put(":closedAt", AttributeValue.builder().s(closedAtString).build());
             expressionAttributeValues.put(":adminComment", AttributeValue.builder().s(closeTaskRequest.adminComment()).build());
-            expressionAttributeValues.put(":updatedAt", AttributeValue.builder().n(String.valueOf(LocalDateTime.now())).build());
+            expressionAttributeValues.put(":updatedAt", AttributeValue.builder().n(String.valueOf(updatedAtTimestamp)).build());
 
             UpdateItemRequest updateItemRequest = UpdateItemRequest.builder()
                     .tableName(taskTable)

@@ -382,8 +382,11 @@ Resources:
           Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
                 - dynamodb:UpdateItem
-              Resource: !GetAtt TaskTable.Arn
+                - dynamodb:PutItem
+              Resource:
+                - !GetAtt TaskTable.Arn
             - Effect: Allow
               Action:
                 - sns:Publish

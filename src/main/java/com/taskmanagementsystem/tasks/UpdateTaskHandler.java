@@ -7,10 +7,15 @@ import java.util.Objects;
 
 
 import com.taskmanagementsystem.entities.Users;
+import com.taskmanagementsystem.util.DynamoDBUtil;
+import com.taskmanagementsystem.util.SnsPublisher;
 import com.taskmanagementsystem.util.TasksMapper;
+import com.taskmanagementsystem.util.UserUtils;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
@@ -37,7 +42,11 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final DynamoDbClient dynamoDbClient;
+    private final AmazonDynamoDB dynamoDbClientV1;
     private final SnsClient snsClient;
+    private final String taskAssignmentTopic;
+    private final SnsPublisher snsPublisher;
+    private final String userTableName;
 
 
 
@@ -45,8 +54,12 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
      * Default constructor initializing AWS SDK clients for DynamoDB and SNS.
      */
     public UpdateTaskHandler() {
+        this.dynamoDbClientV1 = DynamoDBUtil.getDynamoDBClient();
         this.dynamoDbClient = DynamoDbClient.builder().build();
         this.snsClient = SnsClient.builder().build();
+        this.taskAssignmentTopic = System.getenv("TASK_ASSIGNMENT_TOPIC_ARN");
+        this.snsPublisher = new SnsPublisher();
+        this.userTableName = System.getenv("USER_TABLE");
     }
 
 
@@ -65,11 +78,11 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
         try {
             String taskId = requestEvent.getPathParameters().get("taskId");
             Map<String, Object> authorizeMap = requestEvent.getRequestContext().getAuthorizer();
-            JsonNode claimsNode = objectMapper.valueToTree(authorizeMap.get("claims"));
+            // JsonNode claimsNode = objectMapper.valueToTree(authorizeMap.get("claims"));
 
-            if (!claimsNode.has("email") || !claimsNode.has("admin")) {
-                return createServerErrorResponse("Missing required fields in claims");
-            }
+            // if (!claimsNode.has("email") || !claimsNode.has("admin")) {
+            //     return createServerErrorResponse("Missing required fields in claims");
+            // }
             @SuppressWarnings("unchecked")
             Map<String, String> claims = (Map<String, String>) authorizeMap.get("claims");
             String userEmail = claims.get("email");
@@ -85,7 +98,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
             key.put("taskId", AttributeValue.builder().s(taskId).build());
 
             GetItemRequest getItemRequest = GetItemRequest.builder()
-                    .tableName(System.getProperty("TASK_TABLE", "TaskTable"))
+                    .tableName(System.getenv("TASK_TABLE"))
                     .key(key)
                     .build();
 
@@ -173,16 +186,20 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                 }
 
                 if (newlyAssigned) {
-                    String topicArn = System.getenv("TASK_ASSIGNED_NOTIFICATION_TOPIC");
+                    
+                    String userId = UserUtils.getUserIdByEmail(dynamoDbClientV1, userTableName, messageBody.get("assignedUserEmail").asText(), context);
+                    String emailMessage = String.format("You have been reassigned to task %s", task.getName());
+                    snsPublisher.publishTaskAssignment(taskAssignmentTopic, emailMessage, userId, context);
+                    // String topicArn = System.getenv("TASK_ASSIGNED_NOTIFICATION_TOPIC");
 
-                    PublishRequest publishRequest = PublishRequest.builder()
-                            .topicArn(topicArn)
-                            .message(objectMapper.writeValueAsString(updateItemRequest))
-                            .build();
+                    // PublishRequest publishRequest = PublishRequest.builder()
+                    //         .topicArn(topicArn)
+                    //         .message(objectMapper.writeValueAsString(updateItemRequest))
+                    //         .build();
 
-                    snsClient.publish(publishRequest);
-                    logger.info("Task assignment notification sent to {} for task: {}",
-                            updatedTask.getAssignedUserEmail(), updatedTask.getTaskId());
+                    // snsClient.publish(publishRequest);
+                    // logger.info("Task assignment notification sent to {} for task: {}",
+                    //         updatedTask.getAssignedUserEmail(), updatedTask.getTaskId());
 
                 }
 
