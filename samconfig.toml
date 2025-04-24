@@ -1,11 +1,33 @@
 version = 0.1
+[staging]
+[staging.deploy]
 [default.deploy.parameters]
-stack_name = "task-management-test"
-resolve_s3 = true
-s3_prefix = "task-management-test"
+stack_name = "task-management-system"
+s3_bucket = "task-management-sam-deployment-bucket"
+s3_prefix = "task-management-system"
 region = "eu-central-1"
 confirm_changeset = true
-capabilities = "CAPABILITY_IAM"
-disable_rollback = true
-parameter_overrides = "StageName=\"dev\" AdminEmail=\"kingsleybotchwayedu11@gmail.com\""
-image_repositories = []
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "StageName=\"staging\" AdminEmail=\"gideon.agbosu@amalitech.com\""
+
+[dev]
+[dev.deploy]
+[dev.deploy.parameters]
+stack_name = "task-management-system-dev"
+s3_bucket = "task-management-sam-deployment-bucket"
+s3_prefix = "task-management-system-dev"
+region = "eu-central-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "StageName=\"dev\" AdminEmail=\"gideon.agbosu@amalitech.com\""
+
+[prod]
+[prod.deploy]
+[prod.deploy.parameters]
+stack_name = "task-management-system-prod"
+s3_bucket = "task-management-sam-deployment-bucket"
+s3_prefix = "task-management-system-prod"
+region = "eu-central-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "StageName=\"prod\" AdminEmail=\"gideon.agbosu@amalitech.com\""

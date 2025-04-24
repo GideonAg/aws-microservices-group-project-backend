@@ -34,7 +34,6 @@ public class ProcessExpiredTaskHandler implements RequestHandler<Object, Void> {
                 if (deadline != null && now > deadline && !"expired".equalsIgnoreCase(task.getStatus())) {
                     //get the user id and pass it to the step function
                     String userId = UserUtils.getUserIdByEmail(dynamoDB, userTable, task.getAssignedUserEmail(), context);
-                    context.getLogger().log("userId " + userId + " user Email" + task.getAssignedUserEmail());
                     // Trigger Step Function with the taskId to handle expiration logic
                     triggerStepFunction(task.getTaskId(), userId);
                     context.getLogger().log("Task expired: " + task.getTaskId());
