@@ -1,9 +1,12 @@
 version = 0.1
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 [default]
 [default.deploy]
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
@@ -11,6 +14,9 @@ version = 0.1
 deploy = { }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -23,8 +29,11 @@ confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 parameter_overrides = 'StageName="staging" AdminEmail="gideon.agbosu@amalitech.com"'
@@ -42,6 +51,9 @@ watch = true
   StageName = "dev"
   AdminEmail = "kwasi.baidoo@amalitech.com"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -55,7 +67,11 @@ confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"dev\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="dev" AdminEmail="gideon.agbosu@amalitech.com"'
+>>>>>>> Stashed changes
 =======
 parameter_overrides = 'StageName="dev" AdminEmail="gideon.agbosu@amalitech.com"'
 >>>>>>> Stashed changes
@@ -72,7 +88,11 @@ confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="prod" AdminEmail="gideon.agbosu@amalitech.com"'
+>>>>>>> Stashed changes
 =======
 parameter_overrides = 'StageName="prod" AdminEmail="gideon.agbosu@amalitech.com"'
 >>>>>>> Stashed changes
