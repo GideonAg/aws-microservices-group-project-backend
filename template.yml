@@ -409,14 +409,29 @@ Resources:
           Statement:
             - Effect: Allow
               Action:
+                - dynamodb:GetItem
                 - dynamodb:UpdateItem
-              Resource: !GetAtt TaskTable.Arn
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
             - Effect: Allow
               Action:
                 - sns:Publish
               Resource:
                 - !Ref TaskCompleteNotificationTopic
                 - !Ref ReopenedTasksNotificationTopic
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TasksQueue.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+              Resource: !Ref TaskAssignmentNotificationTopic
       Events:
         UpdateTask:
           Type: Api

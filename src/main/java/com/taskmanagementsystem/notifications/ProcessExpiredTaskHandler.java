@@ -28,9 +28,10 @@ public class ProcessExpiredTaskHandler implements RequestHandler<Object, Void> {
             // Fetch all tasks that are not completed or expired (add your filtering logic here)
             List<Tasks> tasks = taskService.getIncompleteTasks();
             long now = System.currentTimeMillis();
+            context.getLogger().log("Time on the system" + now);
             for (Tasks task : tasks) {
                 Long deadline = task.getDeadline();
-
+                
                 if (deadline != null && now > deadline && !"expired".equalsIgnoreCase(task.getStatus())) {
                     //get the user id and pass it to the step function
                     String userId = UserUtils.getUserIdByEmail(dynamoDB, userTable, task.getAssignedUserEmail(), context);
