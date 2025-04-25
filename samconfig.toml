@@ -1,6 +1,13 @@
 version = 0.1
+<<<<<<< Updated upstream
 [default]
 [default.deploy]
+=======
+
+[staging]
+deploy = { }
+
+>>>>>>> Stashed changes
 [default.deploy.parameters]
 stack_name = "task-management-system"
 s3_bucket = "task-management-sam-deployment-bucket"
@@ -8,10 +15,25 @@ s3_prefix = "task-management-system"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="staging" AdminEmail="gideon.agbosu@amalitech.com"'
 
-[dev]
-[dev.deploy]
+[default.global.parameters]
+stack_name = "task-management-dev"
+region = "eu-central-1"
+
+[default.sync.parameters]
+template_file = "c:\\Users\\KwasiSakyiBaidoo\\Documents\\GitHub\\aws-microservices-group-project-backend\\template.yml"
+dependency_layer = false
+watch = true
+
+  [default.sync.parameters.parameter_overrides]
+  StageName = "dev"
+  AdminEmail = "kwasi.baidoo@amalitech.com"
+>>>>>>> Stashed changes
+
 [dev.deploy.parameters]
 stack_name = "task-management-system-dev"
 s3_bucket = "task-management-sam-deployment-bucket"
@@ -19,10 +41,12 @@ s3_prefix = "task-management-system-dev"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"dev\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="dev" AdminEmail="gideon.agbosu@amalitech.com"'
+>>>>>>> Stashed changes
 
-[prod]
-[prod.deploy]
 [prod.deploy.parameters]
 stack_name = "task-management-system-prod"
 s3_bucket = "task-management-sam-deployment-bucket"
@@ -30,4 +54,8 @@ s3_prefix = "task-management-system-prod"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="prod" AdminEmail="gideon.agbosu@amalitech.com"'
+>>>>>>> Stashed changes
