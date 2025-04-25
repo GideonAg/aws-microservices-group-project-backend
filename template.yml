@@ -38,7 +38,6 @@ Parameters:
     Type: String
     Description: Logout url for application frontend
 
-
 Resources:
   #######################
   # Authentication Resources
@@ -64,7 +63,7 @@ Resources:
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
         InviteMessageTemplate:
-          EmailMessage: "Your username is {username} and temporary password is {####}. Please login to the Task Management System at {##URL##}"
+          EmailMessage: !Sub "Your username is {username} and temporary password is {####}. Please login to the Task Management System."
           EmailSubject: "Your Task Management System login details"
       EmailConfiguration:
         EmailSendingAccount: COGNITO_DEFAULT
@@ -86,7 +85,7 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
-      PreventUserExistenceErrors: true
+      PreventUserExistenceErrors: ENABLED
       EnableTokenRevocation: true
       CallbackURLs:
         - !Ref CallbackURLs
@@ -107,8 +106,16 @@ Resources:
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: "amalitech-task-manager" # Required
+      Domain: "amalitech-task-manager"
       ManagedLoginVersion: "2"
+      UserPoolId: !Ref UserPool
+
+  ManagedLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    Properties:
+      ClientId: !Ref UserPoolClient
+      ReturnMergedResources: true
+      UseCognitoProvidedValues: true
       UserPoolId: !Ref UserPool
 
   AdminUser:
@@ -242,7 +249,7 @@ Resources:
       FifoQueue: true
       ContentBasedDeduplication: true
 
-    ##############################
+  ##############################
   # Admin Email Subscriptions
   ##############################
   AdminSubscriptionCloseNotificationTopic:
@@ -264,9 +271,6 @@ Resources:
       FilterPolicy:
         role:
           - "admin"
-
-
-
 
   #######################
   # API Gateway
@@ -306,12 +310,10 @@ Resources:
               Action:
                 - dynamodb:PutItem
               Resource: !GetAtt UserTable.Arn
-
             - Effect: Allow
               Action:
                 - states:StartExecution
               Resource: !GetAtt UserOnboardingStateMachine.Arn
-
             - Effect: Allow
               Action:
                 - sns:Subscribe
@@ -367,7 +369,6 @@ Resources:
               Action:
                 - sqs:SendMessage
               Resource: !GetAtt TasksQueue.Arn
-                # Add this new statement for Cognito permissions
             - Effect: Allow
               Action:
                 - cognito-idp:ListUsers
@@ -471,7 +472,6 @@ Resources:
             Method: put
             Auth:
               Authorizer: CognitoAuthorizer
-
 
   ReassignTaskFunction:
     Type: AWS::Serverless::Function
@@ -698,9 +698,6 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt ExpiredTaskRule.Arn
 
-
-  
-
 Outputs:
   ApiEndpoint:
     Description: "API Gateway endpoint URL"
@@ -721,3 +718,11 @@ Outputs:
   UserTableName:
     Description: "DynamoDB User Table Name"
     Value: !Ref UserTable
+
+  UserPoolDomainName:
+    Description: "Cognito User Pool Domain Name"
+    Value: !Sub "amalitech-task-manager.auth.${AWS::Region}.amazoncognito.com"
+
+  HostedUIUrl:
+    Description: "Cognito Hosted UI URL"
+    Value: !Sub "https://amalitech-task-manager.auth.${AWS::Region}.amazoncognito.com/login?client_id=${UserPoolClient}&response_type=code&scope=email+openid+profile+phone+aws.cognito.signin.user.admin&redirect_uri=${CallbackURLs}"

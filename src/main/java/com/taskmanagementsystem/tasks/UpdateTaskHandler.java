@@ -120,7 +120,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                     }
 
                     if (messageBody.has("userComment")) {
-                        task.setStatus(messageBody.get("userComment").asText());
+                        task.setUserComment(messageBody.get("userComment").asText());
                     }
 
                     // If task was marked as completed, notify admin
