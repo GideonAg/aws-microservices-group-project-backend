@@ -10,17 +10,15 @@
           "States": {
             "SubscribeToTaskAssignment": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::sns:subscribe",
+              "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
               "Parameters": {
                 "TopicArn": "${TaskAssignmentNotificationTopic}",
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
-                "FilterPolicy": {
-                  "userId": [
-                    {
-                      "S.$": "$.userId"
-                    }
-                  ]
+                "Attributes": {
+                  "FilterPolicy": {
+                    "userId.$": "States.Array($.userId)"
+                  }
                 }
               },
               "End": true
@@ -32,17 +30,15 @@
           "States": {
             "SubscribeToTaskDeadline": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::sns:subscribe",
+              "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
               "Parameters": {
                 "TopicArn": "${TaskDeadlineNotificationTopic}",
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
-                "FilterPolicy": {
-                  "userId": [
-                    {
-                      "S.$": "$.userId"
-                    }
-                  ]
+                "Attributes": {
+                  "FilterPolicy": {
+                    "userId.$": "States.Array($.userId)"
+                  }
                 }
               },
               "End": true
@@ -54,17 +50,15 @@
           "States": {
             "SubscribeToClosedTask": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::sns:subscribe",
+              "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
               "Parameters": {
                 "TopicArn": "${ClosedTaskNotificationTopic}",
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
-                "FilterPolicy": {
-                  "userId": [
-                    {
-                      "S.$": "$.userId"
-                    }
-                  ]
+                "Attributes": {
+                  "FilterPolicy": {
+                    "userId.$": "States.Array($.userId)"
+                  }
                 }
               },
               "End": true
@@ -87,15 +81,15 @@
             },
             "SubscribeToTaskComplete": {
               "Type": "Task",
-              "Resource": "arn:aws:states:::sns:subscribe",
+              "Resource": "arn:aws:states:::aws-sdk:sns:subscribe",
               "Parameters": {
                 "TopicArn": "${TaskCompleteNotificationTopic}",
                 "Protocol": "email",
                 "Endpoint.$": "$.email",
-                "FilterPolicy": {
-                  "role": [
-                    "admin"
-                  ]
+                "Attributes": {
+                  "FilterPolicy": {
+                    "role": ["admin"]
+                  }
                 }
               },
               "End": true
