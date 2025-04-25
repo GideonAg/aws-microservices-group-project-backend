@@ -79,6 +79,13 @@ Resources:
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
       PreventUserExistenceErrors: ENABLED
 
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: "amalitech-task-manager" # Required
+      ManagedLoginVersion: "2"
+      UserPoolId: "String" # Required
+
   AdminUser:
     Type: AWS::Cognito::UserPoolUser
     Properties:
