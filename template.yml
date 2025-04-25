@@ -31,6 +31,13 @@ Parameters:
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
+  CallbackURLs:
+    Type: String
+    Description: Callback url for application frontend
+  LogoutURLs:
+    Type: String
+    Description: Logout url for application frontend
+
 
 Resources:
   #######################
@@ -79,14 +86,30 @@ Resources:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
-      PreventUserExistenceErrors: ENABLED
+      PreventUserExistenceErrors: true
+      EnableTokenRevocation: true
+      CallbackURLs:
+        - !Ref CallbackURLs
+      LogoutURLs:
+        - !Ref LogoutURLs
+      SupportedIdentityProviders:
+        - COGNITO
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+        - phone
+        - aws.cognito.signin.user.admin
 
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
       Domain: "amalitech-task-manager" # Required
       ManagedLoginVersion: "2"
-      UserPoolId: "String" # Required
+      UserPoolId: !Ref UserPool
 
   AdminUser:
     Type: AWS::Cognito::UserPoolUser
