@@ -1,12 +1,18 @@
 version = 0.1
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 [default]
 [default.deploy]
 =======
+=======
+>>>>>>> Stashed changes
 
 [staging]
 deploy = { }
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 [default.deploy.parameters]
 stack_name = "task-management-system"
@@ -16,8 +22,11 @@ region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
 =======
+=======
+>>>>>>> Stashed changes
 parameter_overrides = 'StageName="staging" AdminEmail="gideon.agbosu@amalitech.com"'
 
 [default.global.parameters]
@@ -32,6 +41,9 @@ watch = true
   [default.sync.parameters.parameter_overrides]
   StageName = "dev"
   AdminEmail = "kwasi.baidoo@amalitech.com"
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 [dev.deploy.parameters]
@@ -42,7 +54,11 @@ region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"dev\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="dev" AdminEmail="gideon.agbosu@amalitech.com"'
+>>>>>>> Stashed changes
 =======
 parameter_overrides = 'StageName="dev" AdminEmail="gideon.agbosu@amalitech.com"'
 >>>>>>> Stashed changes
@@ -55,7 +71,11 @@ region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 parameter_overrides = "StageName=\"prod\" AdminEmail=\"admin@example.com\""
+=======
+parameter_overrides = 'StageName="prod" AdminEmail="gideon.agbosu@amalitech.com"'
+>>>>>>> Stashed changes
 =======
 parameter_overrides = 'StageName="prod" AdminEmail="gideon.agbosu@amalitech.com"'
 >>>>>>> Stashed changes
