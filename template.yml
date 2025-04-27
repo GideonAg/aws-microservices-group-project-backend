@@ -725,4 +725,4 @@ Outputs:
 
   HostedUIUrl:
     Description: "Cognito Hosted UI URL"
-    Value: !Sub "https://amalitech-task-manager.auth.${AWS::Region}.amazoncognito.com/login?client_id=${UserPoolClient}&response_type=code&scope=email+openid+profile+phone+aws.cognito.signin.user.admin&redirect_uri=${CallbackURLs}"
+    Value: !Sub "https://amalitech-task-manager.auth.${AWS::Region}.amazoncognito.com/login?client_id=${UserPoolClient}&response_type=token&scope=email+openid+profile+phone+aws.cognito.signin.user.admin&redirect_uri=${CallbackURLs}"
