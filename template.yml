@@ -5,7 +5,7 @@ Description: Task Management System SAM Template
 Globals:
   Function:
     Timeout: 30
-    Runtime: java17
+    Runtime: java21
     MemorySize: 256
     Environment:
       Variables:
@@ -16,19 +16,29 @@ Globals:
         TASK_ASSIGNMENT_TOPIC_ARN: !Ref TaskAssignmentNotificationTopic
         TASK_DEADLINE_TOPIC_ARN: !Ref TaskDeadlineNotificationTopic
         CLOSED_TASK_TOPIC_ARN: !Ref ClosedTaskNotificationTopic
+        REOPENED_TASK_TOPIC_ARN: !Ref ReopenedTasksNotificationTopic
         TASK_COMPLETE_TOPIC_ARN: !Ref TaskCompleteNotificationTopic
         TASKS_QUEUE_URL: !Ref TasksQueue
         TASKS_DLQ_URL: !Ref TasksDeadLetterQueue
+        USER_ONBOARDING_STATE_MACHINE_ARN: !GetAtt UserOnboardingStateMachine.Arn
+        EXPIRED_TASK_STATE_MACHINE_ARN: !GetAtt TaskExpirationStateMachine.Arn
+        REGION: !Ref AWS::Region
 
 Parameters:
   StageName:
     Type: String
-    Default: prod
-    Description: Stage name for API Gateway deployment
-
+    Description: Environment stage (e.g. dev, staging, prod)
   AdminEmail:
     Type: String
     Description: Email address for the initial admin user
+  CallbackURLs:
+    Type: String
+    Description: Callback url for application frontend
+    default: https://main.daqvdg9hz9mfz.amplifyapp.com/
+  LogoutURLs:
+    Type: String
+    Description: Logout url for application frontend
+    default: https://main.daqvdg9hz9mfz.amplifyapp.com/
 
 Resources:
   #######################
@@ -38,7 +48,7 @@ Resources:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: !Sub TaskManagementUserPool-${StageName}
-      AutoVerifyAttributes:
+      AutoVerifiedAttributes:
         - email
       UsernameAttributes:
         - email
@@ -51,11 +61,11 @@ Resources:
         - Name: role
           AttributeDataType: String
           Mutable: true
-          Required: true
+          Required: false
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
         InviteMessageTemplate:
-          EmailMessage: "Your username is {username} and temporary password is {####}. Please login to the Task Management System at {##URL##}"
+          EmailMessage: !Sub "Your username is {username} and temporary password is {####}. Please login to the Task Management System."
           EmailSubject: "Your Task Management System login details"
       EmailConfiguration:
         EmailSendingAccount: COGNITO_DEFAULT
@@ -78,6 +88,37 @@ Resources:
         - ALLOW_REFRESH_TOKEN_AUTH
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
       PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      CallbackURLs:
+        - !Ref CallbackURLs
+      LogoutURLs:
+        - !Ref LogoutURLs
+      SupportedIdentityProviders:
+        - COGNITO
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - email
+        - openid
+        - profile
+        - phone
+        - aws.cognito.signin.user.admin
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: "amalitech-task-manager"
+      ManagedLoginVersion: "2"
+      UserPoolId: !Ref UserPool
+
+  ManagedLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    Properties:
+      ClientId: !Ref UserPoolClient
+      ReturnMergedResources: true
+      UseCognitoProvidedValues: true
+      UserPoolId: !Ref UserPool
 
   AdminUser:
     Type: AWS::Cognito::UserPoolUser
@@ -87,14 +128,14 @@ Resources:
       UserAttributes:
         - Name: email
           Value: !Ref AdminEmail
-        - Name: email_verified
-          Value: "true"
-        - Name: role
+        - Name: custom:role
           Value: "admin"
+      DesiredDeliveryMediums:
+        - EMAIL
 
   #######################
   # Database Resources
-  #######################
+  ######################
   TaskTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -103,7 +144,7 @@ Resources:
       AttributeDefinitions:
         - AttributeName: taskId
           AttributeType: S
-        - AttributeName: assignedTo
+        - AttributeName: assignedUserEmail
           AttributeType: S
         - AttributeName: status
           AttributeType: S
@@ -113,7 +154,7 @@ Resources:
       GlobalSecondaryIndexes:
         - IndexName: AssigneeIndex
           KeySchema:
-            - AttributeName: assignedTo
+            - AttributeName: assignedUserEmail
               KeyType: HASH
             - AttributeName: status
               KeyType: RANGE
@@ -123,7 +164,7 @@ Resources:
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub TaskManagement-Users-${StageName}
+      TableName: !Sub "TaskManagement-Users-${StageName}"
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: userId
@@ -150,6 +191,25 @@ Resources:
       TopicName: !Sub TaskAssignmentNotificationTopic-${StageName}
       DisplayName: Task Assignment
 
+  TaskAssignmentNotificationTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref TaskAssignmentNotificationTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action:
+              - sns:Subscribe
+              - sns:Receive
+            Resource: !Ref TaskAssignmentNotificationTopic
+            Condition:
+              StringEquals:
+                sns:Protocol: "email"
+
   TaskDeadlineNotificationTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -161,6 +221,12 @@ Resources:
     Properties:
       TopicName: !Sub ClosedTaskNotificationTopic-${StageName}
       DisplayName: Closed Task
+
+  ReopenedTasksNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ReopenedTasksNotificationTopic-${StageName}
+      DisplayName: Reopened Task
 
   TaskCompleteNotificationTopic:
     Type: AWS::SNS::Topic
@@ -185,6 +251,29 @@ Resources:
       FifoQueue: true
       ContentBasedDeduplication: true
 
+  ##############################
+  # Admin Email Subscriptions
+  ##############################
+  AdminSubscriptionCloseNotificationTopic:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref ClosedTaskNotificationTopic
+      Protocol: email
+      Endpoint: !Ref AdminEmail
+      FilterPolicy:
+        role:
+          - "admin"
+
+  AdminSubscriptionCompleteTaskNotification:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref TaskCompleteNotificationTopic
+      Protocol: email
+      Endpoint: !Ref AdminEmail
+      FilterPolicy:
+        role:
+          - "admin"
+
   #######################
   # API Gateway
   #######################
@@ -193,7 +282,6 @@ Resources:
     Properties:
       StageName: !Ref StageName
       Auth:
-        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt UserPool.Arn
@@ -210,21 +298,33 @@ Resources:
   CreateUserFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/auth/
-      Handler: createUser.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.auth.CreateUserHandler::handleRequest
       Policies:
-        - AmazonCognitoPowerUser
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UserTable
-        - Statement:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminSetUserPassword
+              Resource: !GetAtt UserPool.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt UserTable.Arn
+            - Effect: Allow
+              Action:
+                - states:StartExecution
+              Resource: !GetAtt UserOnboardingStateMachine.Arn
             - Effect: Allow
               Action:
                 - sns:Subscribe
-                - sns:ListSubscriptionsByTopic
+                - sns:Publish
               Resource:
                 - !Ref TaskAssignmentNotificationTopic
                 - !Ref TaskDeadlineNotificationTopic
                 - !Ref ClosedTaskNotificationTopic
+                - !Ref ReopenedTasksNotificationTopic
       Events:
         CreateUser:
           Type: Api
@@ -235,17 +335,46 @@ Resources:
             Auth:
               Authorizer: CognitoAuthorizer
 
+  AuthenticationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.auth.AuthenticationHandler::handleRequest
+      Policies:
+        - Version:  "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: cognito-idp:InitiateAuth
+              Resource: "*"
+      Events:
+        Authentication:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /auth
+            Method: POST
+
   # Task Management
   CreateTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: createTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.CreateTaskHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt TasksQueue.QueueName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TasksQueue.Arn
+            - Effect: Allow
+              Action:
+                - cognito-idp:ListUsers
+              Resource: !GetAtt UserPool.Arn
       Events:
         CreateTask:
           Type: Api
@@ -259,11 +388,18 @@ Resources:
   GetTasksFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: getTasks.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.GetTasksHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource:
+                - !GetAtt TaskTable.Arn
+                - !Sub "${TaskTable.Arn}/index/AssigneeIndex"
       Events:
         GetTasks:
           Type: Api
@@ -277,11 +413,15 @@ Resources:
   GetTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: getTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.GetTaskHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+              Resource: !GetAtt TaskTable.Arn
       Events:
         GetTask:
           Type: Api
@@ -295,13 +435,36 @@ Resources:
   UpdateTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/tasks/
-      Handler: updateTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.UpdateTaskHandler::handleRequest
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskCompleteNotificationTopic.TopicName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:UpdateItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource:
+                - !Ref TaskCompleteNotificationTopic
+                - !Ref ReopenedTasksNotificationTopic
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TasksQueue.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+              Resource: !Ref TaskAssignmentNotificationTopic
       Events:
         UpdateTask:
           Type: Api
@@ -312,72 +475,194 @@ Resources:
             Auth:
               Authorizer: CognitoAuthorizer
 
+  ReassignTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.ReassignTaskHandler::handleRequest
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:GetItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt TasksQueue.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+                - sns:Subscribe
+              Resource: !Ref TaskAssignmentNotificationTopic
+      Events:
+        ReassignTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /tasks/{taskId}/reassign
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
+
   # Notifications
   ProcessTaskQueueFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/notifications/
-      Handler: processTaskQueue.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.notifications.ProcessTaskQueueHandler::handleRequest
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskAssignmentNotificationTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref TaskAssignmentNotificationTopic
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:GetItem
+                - dynamodb:Query
+              Resource: 
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
       Events:
         SQSEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt TasksQueue.Arn
             BatchSize: 1
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
 
   TaskDeadlineNotificationFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/notifications/
-      Handler: taskDeadlineNotification.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.notifications.TaskDeadlineNotificationHandler::handleRequest
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskDeadlineNotificationTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref TaskDeadlineNotificationTopic
+            - Effect: Allow
+              Action:
+                - dynamodb:Scan
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource: 
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
 
   ProcessExpiredTaskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/notifications/
-      Handler: processExpiredTask.handler
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.notifications.ProcessExpiredTaskHandler::handleRequest
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - StepFunctionsExecutionPolicy:
-            StateMachineArn: !Ref TaskExpirationStateMachine
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ClosedTaskNotificationTopic
+            - Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:Scan
+              Resource: 
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
+            - Effect: Allow
+              Action:
+                - states:StartExecution
+              Resource: !GetAtt TaskExpirationStateMachine.Arn
 
   # Step Functions
   TaskExpirationStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: statemachines/taskExpiration.asl.json
+      DefinitionSubstitutions:
+        ClosedTaskNotificationTopic: !Ref ClosedTaskNotificationTopic
+        TaskTable: !Ref TaskTable
       Type: STANDARD
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref TaskTable
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ClosedTaskNotificationTopic
+
+  CloseTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: com.taskmanagementsystem.tasks.CloseTaskHandler::handleRequest
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+              Resource: !GetAtt TaskTable.Arn
+            - Effect: Allow
+              Action:
+                - sns:Publish
+              Resource: !Ref ClosedTaskNotificationTopic
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminGetUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        CloseTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /tasks/{taskId}/close
+            Method: post
+            Auth:
+              Authorizer: CognitoAuthorizer
 
   UserOnboardingStateMachine:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: statemachines/userOnboarding.asl.json
+      DefinitionSubstitutions:
+        TaskAssignmentNotificationTopic: !Ref TaskAssignmentNotificationTopic
+        TaskDeadlineNotificationTopic: !Ref TaskDeadlineNotificationTopic
+        ClosedTaskNotificationTopic: !Ref ClosedTaskNotificationTopic
+        TaskCompleteNotificationTopic: !Ref TaskCompleteNotificationTopic
+        ReopenedTasksNotificationTopic: !Ref ReopenedTasksNotificationTopic
       Type: STANDARD
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskAssignmentNotificationTopic.TopicName
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt TaskDeadlineNotificationTopic.TopicName
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt ClosedTaskNotificationTopic.TopicName
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sns:Subscribe
+              Resource:
+                - !Ref TaskAssignmentNotificationTopic
+                - !Ref TaskDeadlineNotificationTopic
+                - !Ref ClosedTaskNotificationTopic
+                - !Ref TaskCompleteNotificationTopic
+                - !Ref ReopenedTasksNotificationTopic
 
   #######################
   # EventBridge Resources
@@ -401,6 +686,25 @@ Resources:
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DeadlineReminderRule.Arn
 
+  ExpiredTaskRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub ExpiredTaskRule-${StageName}
+      Description: "Rule to check for expired tasks"
+      ScheduleExpression: "rate(5 minutes)"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ProcessExpiredTaskFunction.Arn
+          Id: "TaskDeadlineFunction"
+
+  ExpiredTaskRulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref ProcessExpiredTaskFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ExpiredTaskRule.Arn
+
 Outputs:
   ApiEndpoint:
     Description: "API Gateway endpoint URL"
@@ -421,3 +725,11 @@ Outputs:
   UserTableName:
     Description: "DynamoDB User Table Name"
     Value: !Ref UserTable
+
+  UserPoolDomainName:
+    Description: "Cognito User Pool Domain Name"
+    Value: !Sub "amalitech-task-manager.auth.${AWS::Region}.amazoncognito.com"
+
+  HostedUIUrl:
+    Description: "Cognito Hosted UI URL"
+    Value: !Sub "https://amalitech-task-manager.auth.${AWS::Region}.amazoncognito.com/login?client_id=${UserPoolClient}&response_type=token&scope=email+openid+profile+phone+aws.cognito.signin.user.admin&redirect_uri=${CallbackURLs}"
