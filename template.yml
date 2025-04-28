@@ -108,7 +108,7 @@ Resources:
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: "amalitech-task-manager"
+      Domain: "amalitech-task-manager-prod"
       ManagedLoginVersion: "2"
       UserPoolId: !Ref UserPool
 
