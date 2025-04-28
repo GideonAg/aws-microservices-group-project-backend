@@ -557,7 +557,12 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:Scan
-              Resource: !GetAtt TaskTable.Arn
+                - dynamodb:Query
+                - dynamodb:GetItem
+              Resource: 
+                - !GetAtt TaskTable.Arn
+                - !GetAtt UserTable.Arn
+                - !Sub "${UserTable.Arn}/index/EmailIndex"
 
   ProcessExpiredTaskFunction:
     Type: AWS::Serverless::Function
