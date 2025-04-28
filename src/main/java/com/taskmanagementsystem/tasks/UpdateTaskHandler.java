@@ -195,14 +195,13 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                         }
                         task.setAssignedUserEmail(messageBody.get("assignedUserEmail").asText());
                         newlyAssigned = true;
+                        task.setStatus("open");
                     }
 
                     if (messageBody.has("deadline") &&
                             !Objects.equals(task.getDeadline(), messageBody.get("deadline").asLong())) {
                         task.setDeadline(messageBody.get("deadline").asLong());
                     }
-
-                    task.setStatus("open");
 
                     Map<String, AttributeValue> updateItemRequest = TasksMapper.toItem(task);
                     PutItemRequest putItemRequest = new PutItemRequest()
