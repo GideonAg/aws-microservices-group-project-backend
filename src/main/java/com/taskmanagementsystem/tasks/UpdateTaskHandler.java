@@ -187,7 +187,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                     boolean newlyAssigned = false;
                     if (messageBody.has("assignedUserEmail") &&
                             !Objects.equals(messageBody.get("assignedUserEmail").asText(), task.getAssignedUserEmail())) {
-                        if (!task.getStatus().equals("closed") || task == null) {
+                        if (!task.getStatus().equals("closed") || !task.getStatus().equals("expired") || task == null) {
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(403)
                                     .withHeaders(HeadersUtil.getHeaders())
