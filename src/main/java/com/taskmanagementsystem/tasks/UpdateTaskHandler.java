@@ -187,11 +187,11 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                     boolean newlyAssigned = false;
                     if (messageBody.has("assignedUserEmail") &&
                             !Objects.equals(messageBody.get("assignedUserEmail").asText(), task.getAssignedUserEmail())) {
-                        if (!task.getStatus().equals("closed") || !task.getStatus().equals("expired") || task == null) {
+                        if (task == null || (!task.getStatus().equals("closed") && !task.getStatus().equals("expired"))) {
                             return new APIGatewayProxyResponseEvent()
                                     .withStatusCode(403)
                                     .withHeaders(HeadersUtil.getHeaders())
-                                    .withBody("{\"message\": \"Forbidden: Only closed tasks can be reassigned\"}");
+                                    .withBody("{\"message\": \"Forbidden: Only closed or expired tasks can be reassigned\"}");
                         }
                         task.setAssignedUserEmail(messageBody.get("assignedUserEmail").asText());
                         newlyAssigned = true;
