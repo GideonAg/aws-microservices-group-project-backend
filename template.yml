@@ -34,11 +34,11 @@ Parameters:
   CallbackURLs:
     Type: String
     Description: Callback url for application frontend
-    Default: https://main.daqvdg9hz9mfz.amplifyapp.com/dashboard/
+    Default: http://localhost:3000/dashboard/
   LogoutURLs:
     Type: String
     Description: Logout url for application frontend
-    Default: https://main.daqvdg9hz9mfz.amplifyapp.com/dashboard/
+    Default: http://localhost:3000/dashboard/
 
 Resources:
   #######################
