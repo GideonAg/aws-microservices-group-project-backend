@@ -218,6 +218,9 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
 
                     if(newlyAssigned) {
                         String userId = UserUtils.getUserIdByEmail(dynamoDbClient, userTableName, messageBody.get("assignedUserEmail").asText(), context);
+                        if(userId == null) {
+                            return createServerErrorResponse("User does not exist");
+                        }
                         String emailMessage = String.format("You have been reassigned to task %s", task.getName());
                         snsPublisher.publishTaskAssignment(taskAssignmentTopic, emailMessage, userId, context);
                     }
