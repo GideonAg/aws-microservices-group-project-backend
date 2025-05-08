@@ -204,13 +204,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                         task.setStatus("open");
                     }
 
-                    Map<String, AttributeValue> updateItemRequest = TasksMapper.toItem(task);
-                    PutItemRequest putItemRequest = new PutItemRequest()
-                        .withTableName(taskTableName)
-                        .withItem(updateItemRequest);
-
-                    dynamoDbClient.putItem(putItemRequest);
-                    logger.info("Task {} updated successfully", taskId);
+                    
 
                     
 
@@ -225,6 +219,14 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                         String emailMessage = String.format("You have been reassigned to task %s", task.getName());
                         snsPublisher.publishTaskAssignment(taskAssignmentTopic, emailMessage, userId, context);
                     }
+
+                    Map<String, AttributeValue> updateItemRequest = TasksMapper.toItem(task);
+                    PutItemRequest putItemRequest = new PutItemRequest()
+                        .withTableName(taskTableName)
+                        .withItem(updateItemRequest);
+
+                    dynamoDbClient.putItem(putItemRequest);
+                    logger.info("Task {} updated successfully", taskId);
 
                     return createSuccessResponse();
 
