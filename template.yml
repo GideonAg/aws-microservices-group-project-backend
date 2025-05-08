@@ -288,7 +288,7 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key'"
-        AllowOrigin: "'*'"
+        AllowOrigin: "'https://main.daqvdg9hz9mfz.amplifyapp.com/'"
 
   #######################
   # Lambda Functions

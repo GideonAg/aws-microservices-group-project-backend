@@ -106,7 +106,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             // Add CORS headers
             Map<String, String> headers = new HashMap<>();
             headers.put("Content-Type", "application/json");
-            headers.put("Access-Control-Allow-Origin", "*");
+            headers.put("Access-Control-Allow-Origin", "https://main.daqvdg9hz9mfz.amplifyapp.com/");
             headers.put("Access-Control-Allow-Methods", "POST, OPTIONS");
             headers.put("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Amz-Date,X-Api-Key");
             response.setHeaders(headers);
@@ -211,7 +211,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
         
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
-        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Access-Control-Allow-Origin", "https://main.daqvdg9hz9mfz.amplifyapp.com/");
         response.setHeaders(headers);
         
         return response;

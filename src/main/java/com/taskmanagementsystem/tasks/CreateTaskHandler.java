@@ -299,7 +299,7 @@ public class CreateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
 
     private Map<String, String> createCorsHeaders() {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Access-Control-Allow-Origin", "https://main.daqvdg9hz9mfz.amplifyapp.com/");
         headers.put("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Amz-Date,X-Api-Key");
         headers.put("Access-Control-Allow-Methods", "OPTIONS,POST");
         headers.put("Content-Type", "application/json");
