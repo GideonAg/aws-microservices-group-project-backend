@@ -19,11 +19,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The type Get tasks handler.
+ */
 public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
     private final DynamoDBMapper dynamoDBMapper;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Instantiates a new Get tasks handler.
+     */
     public GetTasksHandler() {
         AmazonDynamoDB dynamoDBClient = DynamoDBUtil.getDynamoDBClient();
         String taskTableName = System.getenv("TASK_TABLE");
@@ -58,7 +64,7 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                 return response;
             }
 
-            // Extract the email directly from claims
+
             String userEmail = claims.get("email");
             String userRole = claims.get("custom:role");
             boolean isAdmin = "admin".equals(userRole);
@@ -74,13 +80,13 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
 
             List<Tasks> tasks;
             
-            // For admins, fetch all tasks
+
             if (isAdmin) {
-                // Scan all tasks if the user is an admin
+
                 tasks = dynamoDBMapper.scan(Tasks.class, new DynamoDBScanExpression());
                 context.getLogger().log("Admin user - fetched all tasks: " + tasks.size());
             } else {
-                // For regular users, query by assignedUserEmail
+
                 Map<String, AttributeValue> eav = new HashMap<>();
                 eav.put(":email", new AttributeValue().withS(userEmail));
                 
@@ -90,7 +96,7 @@ public class GetTasksHandler implements RequestHandler<APIGatewayProxyRequestEve
                         .withKeyConditionExpression("assignedUserEmail = :email")
                         .withExpressionAttributeValues(eav);
 
-                // Additional debug logging to see what's happening
+
                 context.getLogger().log("Query params: assignedUserEmail = " + userEmail);
                 
                 tasks = dynamoDBMapper.query(Tasks.class, taskQuery);

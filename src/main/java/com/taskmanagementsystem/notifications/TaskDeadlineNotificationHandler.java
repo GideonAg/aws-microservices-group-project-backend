@@ -43,14 +43,13 @@ public class TaskDeadlineNotificationHandler implements RequestHandler<APIGatewa
         response.setHeaders(HeadersUtil.getHeaders());
 
         try {
-            // Calculate time window: tasks with deadlines between now and 1 hour from now (in microseconds)
-            // Convert milliseconds to microseconds
+
             long nowMillis = Instant.now().toEpochMilli();
-			// 1 hour = 3,600,000 milliseconds
+
 			long oneHourFromNowMillis = nowMillis + 3_600_000L;
             context.getLogger().log("NOW" + nowMillis + "ONE HOUR FROM NOW" + oneHourFromNowMillis);
 
-            // Scan tasks that are open and have deadlines within the next hour
+
             Map<String, String> expressionAttributeNames = new HashMap<>();
             expressionAttributeNames.put("#status", "status");
 
@@ -69,21 +68,21 @@ public class TaskDeadlineNotificationHandler implements RequestHandler<APIGatewa
             ScanResponse scanResponse = dynamoDbClient.scan(scanRequest);
             int notificationCount = 0;
 
-            // Process each qualifying task
+
             for (Map<String, AttributeValue> item : scanResponse.items()) {
                 String taskId = item.get("taskId").s();
                 String taskName = item.get("name").s();
                 String assignedTo = item.get("assignedUserEmail").s();
                 String deadlineMicros = item.get("deadline").n();
 
-                // Convert deadline to human-readable format for the notification (microseconds to milliseconds)
+
                 long deadlineMillis = Long.parseLong(deadlineMicros);
                 String deadlineFormatted = DateTimeFormatter
                         .ofPattern("yyyy-MM-dd HH:mm:ss")
                         .withZone(ZoneOffset.UTC)
                         .format(Instant.ofEpochMilli(deadlineMillis));
 
-                // Publish SNS notification with userId filter
+
                 String message = String.format(
                         "Reminder: Task \"%s\" (TaskId: %s) is due at %s UTC",
                         taskName, taskId, deadlineFormatted
@@ -113,7 +112,7 @@ public class TaskDeadlineNotificationHandler implements RequestHandler<APIGatewa
                 logger.info("Published notification for task: {}, assignedTo: {}, deadline: {}", taskId, assignedTo, deadlineFormatted);
             }
 
-            // Return success response
+
             response.setStatusCode(200);
             response.setBody(String.format("{\"message\": \"Processed %d task deadline notifications\"}", notificationCount));
         } 
