@@ -204,13 +204,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                         task.setStatus("open");
                     }
 
-                    Map<String, AttributeValue> updateItemRequest = TasksMapper.toItem(task);
-                    PutItemRequest putItemRequest = new PutItemRequest()
-                        .withTableName(taskTableName)
-                        .withItem(updateItemRequest);
-
-                    dynamoDbClient.putItem(putItemRequest);
-                    logger.info("Task {} updated successfully", taskId);
+                    
 
                     
 
@@ -219,11 +213,20 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
                     if(newlyAssigned) {
                         String userId = UserUtils.getUserIdByEmail(dynamoDbClient, userTableName, messageBody.get("assignedUserEmail").asText(), context);
                         if(userId == null) {
+                            context.getLogger().log("User not found. Message should not be sent. Return createServerErrorResponse");
                             return createServerErrorResponse("User does not exist");
                         }
                         String emailMessage = String.format("You have been reassigned to task %s", task.getName());
                         snsPublisher.publishTaskAssignment(taskAssignmentTopic, emailMessage, userId, context);
                     }
+
+                    Map<String, AttributeValue> updateItemRequest = TasksMapper.toItem(task);
+                    PutItemRequest putItemRequest = new PutItemRequest()
+                        .withTableName(taskTableName)
+                        .withItem(updateItemRequest);
+
+                    dynamoDbClient.putItem(putItemRequest);
+                    logger.info("Task {} updated successfully", taskId);
 
                     return createSuccessResponse();
 
@@ -257,7 +260,7 @@ public class UpdateTaskHandler implements RequestHandler<APIGatewayProxyRequestE
     private static APIGatewayProxyResponseEvent createServerErrorResponse(String message) {
         return new APIGatewayProxyResponseEvent()
                 .withStatusCode(500)
-                .withBody("{\"error\": \"" + message + "\"}")
+                .withBody("{\"message\": \"" + message + "\"}")
                 .withHeaders(HeadersUtil.getHeaders());
     }
 

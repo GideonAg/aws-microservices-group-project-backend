@@ -110,7 +110,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             headers.put("Access-Control-Allow-Methods", "POST, OPTIONS");
             headers.put("Access-Control-Allow-Headers", "Content-Type,Authorization,X-Amz-Date,X-Api-Key");
             response.setHeaders(headers);
-            
+
         } catch (UserNotFoundException e) {
             context.getLogger().log("User not found: " + e.getMessage());
             return createErrorResponse(404, "Admin User not found");
@@ -121,30 +121,30 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             context.getLogger().log("Error creating user: " + e.getMessage());
             return createErrorResponse(500,  e.getMessage());
         }
-        
+
         return response;
     }
-    
-    
 
-    
+
+
+
     private AdminCreateUserResponse createCognitoUser(CreateUserRequest request, String temporaryPassword) {
         // Create Cognito user attributes
         AttributeType emailAttr = AttributeType.builder()
                 .name("email")
                 .value(request.getEmail())
                 .build();
-                
+
         AttributeType emailVerifiedAttr = AttributeType.builder()
                 .name("email_verified")
                 .value("true")
                 .build();
-                
+
         AttributeType roleAttr = AttributeType.builder()
                 .name("custom:role")
                 .value(request.getRole())
                 .build();
-        
+
         // Build the create user request
         AdminCreateUserRequest createRequest = AdminCreateUserRequest.builder()
                 .userPoolId(userPoolId)
@@ -152,11 +152,11 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
                 .temporaryPassword(temporaryPassword)
                 .userAttributes(emailAttr, emailVerifiedAttr, roleAttr)
                 .build();
-        
+
         // Create the user
         return cognitoClient.adminCreateUser(createRequest);
     }
-    
+
     private Users storeUserInDynamoDB(CreateUserRequest request) {
         // Create and populate Users entity
         Users user = new Users();
@@ -168,13 +168,13 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
         user.setAdmin("admin".equals(request.getRole()));
         user.setCreatedAt(System.currentTimeMillis());
         user.setUpdatedAt(System.currentTimeMillis());
-        
+
         // Save the user to DynamoDB
         dynamoDBMapper.save(user);
-        
+
         return user;
     }
-    
+
     private void startOnboardingWorkflow(String userId, CreateUserRequest request) {
         try {
             // Create input for Step Function
@@ -182,24 +182,24 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             stepFunctionInput.put("userId", userId);
             stepFunctionInput.put("email", request.getEmail());
             stepFunctionInput.put("role", request.getRole());
-            
+
             // Start execution
             StartExecutionRequest startExecutionRequest = StartExecutionRequest.builder()
                 .stateMachineArn(userOnboardingStateMachineArn)
                 .input(objectMapper.writeValueAsString(stepFunctionInput))
                 .build();
-            
+
             sfnClient.startExecution(startExecutionRequest);
         } catch (Exception e) {
             // Log error but don't fail the request
             System.err.println("Error starting onboarding workflow: " + e.getMessage());
         }
     }
-    
+
     private APIGatewayProxyResponseEvent createErrorResponse(int statusCode, String message) {
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
         response.setStatusCode(statusCode);
-        
+
         try {
             Map<String, String> errorBody = new HashMap<>();
             errorBody.put("message", message);
@@ -208,7 +208,7 @@ public class CreateUserHandler implements RequestHandler<APIGatewayProxyRequestE
             // Fallback if JSON serialization fails
             response.setBody("{\"message\":\"" + message + "\"}");
         }
-        
+
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
         headers.put("Access-Control-Allow-Origin", "*");
